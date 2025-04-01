@@ -1,0 +1,6 @@
+pre-training generator...
+epoch:	0	nll:	8.520277163921259
+epoch:	5	nll:	8.515265917166685
+epoch:	10	nll:	8.514864463072557
+epoch:	15	nll:	8.515067296150404
+epoch:	19	nll:	8.514360067171928
