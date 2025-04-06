@@ -1,0 +1,21 @@
+Discriminator pre-training...
+epoch:	1	loss:	0.6912	accuracy:	0.5810	real_prob	0.5041	fake_prob	0.4978
+epoch:	2	loss:	0.6047	accuracy:	0.7690	real_prob	0.6848	fake_prob	0.3218
+epoch:	3	loss:	0.3921	accuracy:	0.8900	real_prob	0.8170	fake_prob	0.1493
+epoch:	4	loss:	0.2196	accuracy:	0.9390	real_prob	0.9214	fake_prob	0.1301
+epoch:	5	loss:	0.1547	accuracy:	0.9515	real_prob	0.8944	fake_prob	0.0523
+epoch:	6	loss:	0.1300	accuracy:	0.9620	real_prob	0.9430	fake_prob	0.0693
+epoch:	7	loss:	0.1031	accuracy:	0.9755	real_prob	0.9660	fake_prob	0.0606
+epoch:	8	loss:	0.0894	accuracy:	0.9695	real_prob	0.9551	fake_prob	0.0581
+epoch:	9	loss:	0.0806	accuracy:	0.9750	real_prob	0.9611	fake_prob	0.0497
+epoch:	10	loss:	0.0758	accuracy:	0.9710	real_prob	0.9407	fake_prob	0.0330
+epoch:	11	loss:	0.0712	accuracy:	0.9760	real_prob	0.9661	fake_prob	0.0475
+epoch:	12	loss:	0.0675	accuracy:	0.9755	real_prob	0.9505	fake_prob	0.0272
+epoch:	13	loss:	0.0632	accuracy:	0.9785	real_prob	0.9756	fake_prob	0.0473
+epoch:	14	loss:	0.0615	accuracy:	0.9765	real_prob	0.9516	fake_prob	0.0215
+epoch:	15	loss:	0.0609	accuracy:	0.9760	real_prob	0.9603	fake_prob	0.0303
+epoch:	16	loss:	0.0575	accuracy:	0.9795	real_prob	0.9550	fake_prob	0.0172
+epoch:	17	loss:	0.0466	accuracy:	0.9825	real_prob	0.9767	fake_prob	0.0279
+epoch:	18	loss:	0.0449	accuracy:	0.9850	real_prob	0.9739	fake_prob	0.0253
+epoch:	19	loss:	0.0435	accuracy:	0.9810	real_prob	0.9786	fake_prob	0.0290
+epoch:	20	loss:	0.0421	accuracy:	0.9810	real_prob	0.9749	fake_prob	0.0265
