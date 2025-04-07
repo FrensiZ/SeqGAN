@@ -22,3 +22,11 @@ epoch:	95	nll:	9.83471
 epoch:	100	nll:	9.77993
 epoch:	105	nll:	9.77534
 epoch:	110	nll:	9.89040
+epoch:	115	nll:	9.82822
+epoch:	120	nll:	9.79568
+epoch:	125	nll:	9.86638
+epoch:	130	nll:	9.91546
+epoch:	135	nll:	9.85395
+epoch:	140	nll:	9.87377
+epoch:	145	nll:	9.91577
+epoch:	150	nll:	9.83736
