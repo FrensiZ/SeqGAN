@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import random
 import matplotlib.pyplot as plt
+import re
 
 def set_seed(seed):
     random.seed(seed)
@@ -14,6 +15,8 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+### TARGET LSTM
 
 class TargetLSTM(nn.Module):
 
@@ -144,10 +147,11 @@ class TargetLSTM(nn.Module):
                 f.write(' '.join([str(int(x)) for x in sample]) + '\n')
 
 
+### GENERATOR
 
 class Generator(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device='cpu'):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device):
         
         super(Generator, self).__init__()
         
@@ -201,9 +205,6 @@ class Generator(nn.Module):
                 x = next_token
             
             return generated_sequences
-        
-    def save_params(self, path):
-        torch.save(self.state_dict(), path)
 
     def pretrain_step(self, x, optimizer):
 
@@ -225,7 +226,7 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
     
     print('Start pre-training...')
 
-     # Open log file
+    # Open log file
     log = open('NEW_experiment-log.txt', 'w')
     log.write('pre-training...\n')
 
@@ -294,3 +295,226 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
     log.close()    
     print('Pretraining finished!')
     
+
+### DISCRIMINATOR
+
+class Discriminator(nn.Module):
+
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers, dropout_rate, device='cpu'):
+        
+        super(Discriminator, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.device = device
+        
+        # Embedding layer
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        
+        # LSTM layer - added num_layers parameter
+        self.lstm = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout_rate if num_layers > 1 else 0  # Dropout between LSTM layers
+        )
+        
+        # Classification head
+        self.classifier = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Linear(hidden_dim, 1)
+        )
+        
+        # Move to device
+        self.to(device)
+    
+    def forward(self, x):
+
+        # Embedding
+        embedded = self.embeddings(x)                       # [batch_size, sequence_length, embedding_dim]
+        
+        # LSTM processing
+        lstm_out, (hidden, cell) = self.lstm(embedded)      # hidden: [num_layers, batch_size, hidden_dim]
+        
+        # Use the final hidden state from the last layer
+        final_hidden = hidden[-1]                           # [batch_size, hidden_dim]
+        
+        # Classification
+        logits = self.classifier(final_hidden)              # [batch_size, 1]
+        
+        return logits.squeeze(-1)                           # [batch_size]
+    
+    def get_reward(self, x):
+
+        with torch.no_grad():
+            logits = self.forward(x)
+            rewards = torch.sigmoid(logits)     # Get the probabilities
+            return rewards
+    
+    def train_step(self, real_data, generated_data, optimizer):
+
+        optimizer.zero_grad()
+        
+        # Prepare inputs and targets
+        batch_size = real_data.size(0)
+
+        inputs = torch.cat([real_data, generated_data], dim=0)
+
+        targets = torch.cat([
+            torch.ones(batch_size, device=self.device), 
+            torch.zeros(batch_size, device=self.device)
+        ], dim=0)
+        
+        # Forward pass
+        logits = self.forward(inputs)
+        
+        # Calculate loss
+        loss = F.binary_cross_entropy_with_logits(logits, targets)
+        
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        
+        return loss.item()
+
+def evaluate_discriminator(discriminator, target_lstm, generator, num_samples, device):
+    
+    discriminator.eval()
+    target_lstm.eval()
+    generator.eval()
+    
+    with torch.no_grad():
+        # Generate data
+        real_data = target_lstm.generate(num_samples).to(device)
+        fake_data = generator.generate(num_samples).to(device)
+        
+        # Get predictions - using get_reward to get probabilities
+        real_preds = discriminator.get_reward(real_data)
+        fake_preds = discriminator.get_reward(fake_data)
+        
+        # Calculate metrics
+        real_correct = (real_preds >= 0.5).sum().item()
+        fake_correct = (fake_preds < 0.5).sum().item()
+        
+        accuracy = (real_correct + fake_correct) / (2 * num_samples)
+        real_prob = real_preds.mean().item()
+        fake_prob = fake_preds.mean().item()
+    
+    metrics = {
+        'accuracy': accuracy,
+        'real_prob': real_prob,
+        'fake_prob': fake_prob
+    }
+    
+    return metrics
+
+def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, device):
+    
+    print('Start pre-training discriminator...')
+    
+    # Open log file
+    log = open(log_file, 'w')
+    log.write('Discriminator pre-training...\n')
+    
+    # Initial evaluation
+    metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000, device=device)
+    print(f"Initial accuracy: {metrics['accuracy']:.4f}")
+    
+    total_epochs = 0
+    
+    # Outer loop (50 times)
+    for outer_epoch in range(outer_epochs):
+
+        # Generate positive samples from the oracle (only once)
+        target_lstm.eval()
+        with torch.no_grad():
+            positive_samples = target_lstm.generate(generated_num)
+            
+        # Generate new negative samples for each outer epoch
+        generator.eval()
+        with torch.no_grad():
+            negative_samples = generator.generate(generated_num)
+        
+        # Create data loaders for this outer epoch
+        pos_dataset = torch.utils.data.TensorDataset(positive_samples)
+        neg_dataset = torch.utils.data.TensorDataset(negative_samples)
+        pos_loader = torch.utils.data.DataLoader(pos_dataset, batch_size=batch_size, shuffle=True)
+        neg_loader = torch.utils.data.DataLoader(neg_dataset, batch_size=batch_size, shuffle=True)
+        
+        for inner_epoch in range(inner_epochs):
+            
+            # Set discriminator to training mode
+            discriminator.train()
+            
+            total_loss = 0
+            num_batches = 0
+            
+            # Iterate through batches (same data for all inner epochs)
+            for (pos_batch,), (neg_batch,) in zip(pos_loader, neg_loader):
+                loss = discriminator.train_step(pos_batch, neg_batch, optimizer)
+                total_loss += loss
+                num_batches += 1
+            
+            total_epochs += 1
+            avg_loss = total_loss / num_batches if num_batches > 0 else 0
+            eval_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000, device=device)
+            
+            log_str = f'epoch:\t{total_epochs}\tloss:\t{avg_loss:.4f}\t'
+            log_str += f'accuracy:\t{eval_metrics["accuracy"]:.4f}\t'
+            log_str += f'real_prob\t{eval_metrics["real_prob"]:.4f}\tfake_prob\t{eval_metrics["fake_prob"]:.4f}'
+            
+            print(log_str)
+            log.write(log_str + '\n')
+            log.flush()
+    
+    log.close()
+    
+    print('Discriminator pretraining finished!')
+
+
+### PRETRAINING
+
+# Initialize models
+VOCAB_SIZE = 5000
+EMB_DIM = 32 
+HIDDEN_DIM = 32 
+SEQ_LENGTH = 20 
+START_TOKEN = 0
+PRE_EPOCH_NUM = 200
+BATCH_SIZE = 64
+SEED = 88
+set_seed(SEED)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+generated_num = 5000
+
+# Discriminator hyperparameters
+DIS_EMB_DIM = 64
+DIS_HIDDEN_DIM = 128
+DIS_NUM_LAYERS = 1
+DIS_DROPOUT = 0.1
+DIS_BATCH_SIZE = 64
+OUTER_EPOCHS = 20
+INNER_EPOCHS = 1
+
+# Create models
+target_lstm = TargetLSTM(VOCAB_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, device)
+target_lstm.load_params(params_path='save/target_params_py3.pkl')
+generator = Generator(VOCAB_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, device)
+discriminator = Discriminator(VOCAB_SIZE, DIS_EMB_DIM, DIS_HIDDEN_DIM, DIS_NUM_LAYERS, DIS_DROPOUT, device)
+
+
+# Initialize optimizer
+g_optimizer = torch.optim.Adam(generator.parameters(), lr=0.01)
+d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=3e-4)
+
+# PRETRAINING
+pretrain_generator(target_lstm, generator, g_optimizer, PRE_EPOCH_NUM, BATCH_SIZE, generated_num, eval_freq=5, lr_patience=5, lr_decay=0.5)
+pretrain_discriminator(target_lstm, generator, discriminator, d_optimizer, OUTER_EPOCHS, INNER_EPOCHS, DIS_BATCH_SIZE, generated_num, 'discriminator_pretrain.txt', device)
+
+
