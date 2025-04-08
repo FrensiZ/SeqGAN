@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import TensorDataset
+from torch.utils.data import DataLoader
 import numpy as np
 import pickle
 import random
@@ -15,6 +17,7 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
 
 ### TARGET LSTM
 
@@ -147,6 +150,7 @@ class TargetLSTM(nn.Module):
                 f.write(' '.join([str(int(x)) for x in sample]) + '\n')
 
 
+
 ### GENERATOR
 
 class Generator(nn.Module):
@@ -222,12 +226,12 @@ class Generator(nn.Module):
         
         return loss.item()
 
-def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_size, generated_num, eval_freq, lr_patience, lr_decay):
+def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_size, generated_num, eval_freq, lr_patience, lr_decay, log_path):
     
     print('Start pre-training...')
 
     # Open log file
-    log = open('NEW_experiment-log.txt', 'w')
+    log = open(log_path, 'w')
     log.write('pre-training...\n')
 
     # For learning rate scheduling
@@ -241,11 +245,7 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
     
     # Create DataLoader
     oracle_dataset = torch.utils.data.TensorDataset(oracle_data)
-    oracle_loader = torch.utils.data.DataLoader(
-        oracle_dataset, 
-        batch_size=batch_size,
-        shuffle=True
-    )
+    oracle_loader = torch.utils.data.DataLoader(oracle_dataset, batch_size=batch_size,shuffle=True)
     
     # Training loop
     for epoch in range(pre_epoch_num):
@@ -292,9 +292,43 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
             print(f"Learning rate reduced to {optimizer.param_groups[0]['lr']}")
             patience_counter = 0
 
-    log.close()    
+    log.close()
+    
+    torch.save(generator.state_dict(), 'generator_pretrained.pth')
+    
     print('Pretraining finished!')
     
+def generator_adversarial_update(generator, sequences, rewards, optimizer):
+
+    optimizer.zero_grad()
+
+    inputs = sequences[:, :-1]  # all but the last token
+    targets = sequences[:, 1:]  # all but the first token
+    logits, _ = generator(inputs)
+    
+
+    log_probs = F.log_softmax(logits, dim=-1)
+    
+    # Create a one-hot representation of the targets
+    one_hot_targets = F.one_hot(targets, num_classes=generator.vocab_size).float()
+    
+    # Calculate the log probability of the selected actions
+    # This gives us a tensor of shape [batch_size, seq_length-1, vocab_size]
+    selected_log_probs = torch.sum(log_probs * one_hot_targets, dim=-1)
+    
+    # Slice rewards to match (exclude reward for the start token)
+    sequence_rewards = rewards[:, 1:]
+    
+    # Policy gradient loss: negative mean of (log_prob * reward)
+    # We use negative because we're minimizing loss but want to maximize reward
+    loss = -torch.mean(selected_log_probs * sequence_rewards)
+    
+    # Backpropagate and update
+    loss.backward()
+    optimizer.step()
+    
+    return loss.item()
+
 
 ### DISCRIMINATOR
 
@@ -441,10 +475,8 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             negative_samples = generator.generate(generated_num)
         
         # Create data loaders for this outer epoch
-        pos_dataset = torch.utils.data.TensorDataset(positive_samples)
-        neg_dataset = torch.utils.data.TensorDataset(negative_samples)
-        pos_loader = torch.utils.data.DataLoader(pos_dataset, batch_size=batch_size, shuffle=True)
-        neg_loader = torch.utils.data.DataLoader(neg_dataset, batch_size=batch_size, shuffle=True)
+        pos_loader = DataLoader(TensorDataset(positive_samples), batch_size=batch_size, shuffle=True)
+        neg_loader = DataLoader(TensorDataset(negative_samples), batch_size=batch_size, shuffle=True)
         
         for inner_epoch in range(inner_epochs):
             
@@ -474,10 +506,195 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     
     log.close()
     
+    torch.save(discriminator.state_dict(), 'discriminator_pretrained.pth')
+    
     print('Discriminator pretraining finished!')
 
 
-### PRETRAINING
+### ROLLOUT
+
+class Rollout:
+    
+    def __init__(self, generator, discriminator, update_rate, device='cpu'):
+
+        self.generator = generator
+        self.discriminator = discriminator
+        self.update_rate = update_rate
+        self.device = device
+        
+        # Copy the generator's parameters
+        self.generator_copy = type(generator)(
+            generator.vocab_size,
+            generator.embedding_dim,
+            generator.hidden_dim,
+            generator.sequence_length,
+            generator.start_token,
+            device
+        ).to(device)
+        
+        # Copy the parameters
+        self._update_generator_copy(update_rate=1.0)  # Full copy on initialization
+        
+    def _update_generator_copy(self, update_rate=None):
+
+        if update_rate is None:
+            update_rate = self.update_rate
+            
+        # Update the generator copy's parameters
+        for target_param, source_param in zip(self.generator_copy.parameters(), self.generator.parameters()):
+            target_param.data.copy_(
+                update_rate * source_param.data + (1.0 - update_rate) * target_param.data
+            )
+    
+    def update_params(self):
+
+        self._update_generator_copy()
+        
+    def get_reward(self, sequences, rollout_num=16):
+
+        batch_size, seq_length = sequences.shape
+        rewards = torch.zeros(batch_size, seq_length, device=self.device)
+        
+        # For the last token, use the discriminator directly
+        with torch.no_grad():
+            final_rewards = self.discriminator.get_reward(sequences)
+            rewards[:, -1] = final_rewards
+        
+        # For each position, perform rollout
+        for position in range(seq_length - 1):
+            position_rewards = torch.zeros(batch_size, device=self.device)
+            
+            # Run multiple rollouts
+            for _ in range(rollout_num):
+                # Complete the sequences from this position
+                completions = self._monte_carlo_search(sequences, fixed_length=position + 1)
+                
+                # Get discriminator rewards for the completions
+                with torch.no_grad():
+                    completion_rewards = self.discriminator.get_reward(completions)
+                    position_rewards += completion_rewards
+            
+            # Average rewards across rollouts
+            rewards[:, position] = position_rewards / rollout_num
+        
+        return rewards
+    
+    def _monte_carlo_search(self, sequences, fixed_length):
+
+        batch_size, seq_length = sequences.shape
+        
+        # Create output tensor with fixed tokens from the input
+        completed_sequences = sequences.clone()
+        
+        # Set generator_copy to evaluation mode
+        self.generator_copy.eval()
+        
+        with torch.no_grad():
+            # Start with the fixed part
+            current_input = sequences[:, :fixed_length]
+            
+            # Initialize hidden state with the fixed part
+            h = None  # The LSTM will initialize its state
+            
+            # Process the fixed part to get the hidden state
+            if fixed_length > 0:
+                # Get embeddings for the fixed tokens
+                emb = self.generator_copy.embeddings(current_input)
+                
+                # Process through LSTM (we'll discard the outputs)
+                _, h = self.generator_copy.lstm(emb, h)
+            
+            # Generate the remaining tokens one at a time
+            current_token = sequences[:, fixed_length-1:fixed_length] if fixed_length > 0 else torch.full(
+                (batch_size, 1), self.generator_copy.start_token, dtype=torch.long, device=self.device
+            )
+            
+            # Complete the sequence token by token
+            for t in range(fixed_length, seq_length):
+                # Get the next token distribution
+                emb = self.generator_copy.embeddings(current_token)
+                lstm_out, h = self.generator_copy.lstm(emb, h)
+                logits = self.generator_copy.output_layer(lstm_out)
+                
+                # Sample from the distribution
+                probs = F.softmax(logits.squeeze(1), dim=-1)
+                next_token = torch.multinomial(probs, 1)
+                
+                # Add to the completed sequence
+                completed_sequences[:, t] = next_token.squeeze()
+                
+                # Update for next iteration
+                current_token = next_token
+        
+        return completed_sequences
+
+
+### ADVERSIAL SETUP
+
+def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_optimizer, num_epochs, batch_size, generated_num, g_steps, d_steps, k_epochs, log_path):
+    
+    # Open log file
+    log = open(log_path, 'w')
+    
+    for epoch in range(num_epochs):
+        
+        print(f"Epoch {epoch}")
+        
+        # GENERATOR TRAINING PHASE
+        for _ in range(g_steps):
+            # Generate sequences
+            generator.train()
+            sequences = generator.generate(batch_size)
+            
+            # Get rewards using rollout
+            rewards = rollout.get_reward(sequences)
+            
+            # Update generator using policy gradient
+            g_loss = generator_adversarial_update(generator, sequences, rewards, g_optimizer)
+        
+        # Update rollout module with new generator parameters
+        rollout.update_params()
+        
+        # DISCRIMINATOR TRAINING PHASE
+        for _ in range(d_steps):
+            
+            # Data generation
+            target_lstm.eval()
+            generator.eval()
+            positive_examples = target_lstm.generate(generated_num)
+            negative_examples = generator.generate(generated_num)
+            
+            # Create data loaders
+            pos_loader = DataLoader(TensorDataset(positive_examples), batch_size=batch_size, shuffle=True)
+            neg_loader = DataLoader(TensorDataset(negative_examples), batch_size=batch_size, shuffle=True)
+            
+            # Train discriminator for k epochs
+            for _ in range(k_epochs):
+                d_losses = []
+                for (pos_batch,), (neg_batch,) in zip(pos_loader, neg_loader):
+                    d_loss = discriminator.train_step(pos_batch, neg_batch, d_optimizer)
+                    d_losses.append(d_loss)
+        
+        # EVALUATION PHASE
+        if epoch % 5 == 0 or epoch == num_epochs - 1:
+            generator.eval()
+            # Generate samples for evaluation
+            eval_samples = generator.generate(generated_num)
+            
+            # Calculate NLL using oracle
+            nll = target_lstm.calculate_nll(eval_samples)
+            
+            # Log metrics
+            print(f"Epoch {epoch}, NLL: {nll:.4f}")
+            log.write(f"epoch:\t{epoch}\tnll:\t{nll:.4f}\n")
+            log.flush()
+            
+    log.close()
+    print("Training completed!")
+
+
+
+### INITALIZATION
 
 # Initialize models
 VOCAB_SIZE = 5000
@@ -485,36 +702,68 @@ EMB_DIM = 32
 HIDDEN_DIM = 32 
 SEQ_LENGTH = 20 
 START_TOKEN = 0
-PRE_EPOCH_NUM = 200
+PRE_EPOCH_NUM = 120
 BATCH_SIZE = 64
 SEED = 88
 set_seed(SEED)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-generated_num = 5000
+generated_num = 10000
 
 # Discriminator hyperparameters
 DIS_EMB_DIM = 64
 DIS_HIDDEN_DIM = 128
 DIS_NUM_LAYERS = 1
-DIS_DROPOUT = 0.1
+DIS_DROPOUT = 0.01
 DIS_BATCH_SIZE = 64
-OUTER_EPOCHS = 20
+OUTER_EPOCHS = 50
 INNER_EPOCHS = 1
 
 # Create models
 target_lstm = TargetLSTM(VOCAB_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, device)
 target_lstm.load_params(params_path='save/target_params_py3.pkl')
 generator = Generator(VOCAB_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, device)
+generator.load_state_dict(torch.load('generator_pretrained.pth', weights_only=False))
 discriminator = Discriminator(VOCAB_SIZE, DIS_EMB_DIM, DIS_HIDDEN_DIM, DIS_NUM_LAYERS, DIS_DROPOUT, device)
 
 
+### PRETRAINING
+
 # Initialize optimizer
-g_optimizer = torch.optim.Adam(generator.parameters(), lr=0.01)
-d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=3e-4)
+g_optimizer = torch.optim.Adam(generator.parameters(), lr=6e-3)
+d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-3)
 
 # PRETRAINING
-pretrain_generator(target_lstm, generator, g_optimizer, PRE_EPOCH_NUM, BATCH_SIZE, generated_num, eval_freq=5, lr_patience=5, lr_decay=0.5)
+pretrain_generator(target_lstm, generator, g_optimizer, PRE_EPOCH_NUM, BATCH_SIZE, generated_num, eval_freq=5, lr_patience=5, lr_decay=0.5, log_path='generator_train.txt')
 pretrain_discriminator(target_lstm, generator, discriminator, d_optimizer, OUTER_EPOCHS, INNER_EPOCHS, DIS_BATCH_SIZE, generated_num, 'discriminator_pretrain.txt', device)
 
+
+### ADVERSIAL TRAINING
+
+# Adversarial training parameters
+TOTAL_BATCH = 200
+G_STEPS = 1       # Generator updates per iteration
+D_STEPS = 5       # Discriminator update iterations
+K_EPOCHS = 3      # Discriminator epochs per update
+ROLLOUT_NUM = 16  # Number of rollouts for reward estimation
+ROLLOUT_UPDATE_RATE = 0.8  # Rate for updating rollout parameters
+
+# Load pretrained models 
+generator.load_state_dict(torch.load('generator_pretrained.pth', weights_only=False))
+discriminator.load_state_dict(torch.load('discriminator_pretrained.pth', weights_only=False))
+
+# Initialize rollout module
+rollout = Rollout(generator, discriminator, ROLLOUT_UPDATE_RATE, device)
+
+# Initialize optimizers for adversarial training (potentially with different learning rates)
+g_optimizer = torch.optim.Adam(generator.parameters(), lr=1e-3)
+d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-4)
+
+# Start adversarial training
+train_seqgan(
+    generator, discriminator, rollout, target_lstm, 
+    g_optimizer, d_optimizer, TOTAL_BATCH,
+    BATCH_SIZE, generated_num, G_STEPS, D_STEPS, K_EPOCHS,
+    log_path='adversarial_training_log.txt'
+)
 
