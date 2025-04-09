@@ -1,3 +1,5 @@
+import torch
+
 class Rollout:
     
     def __init__(self, generator, discriminator, update_rate, device='cpu'):
