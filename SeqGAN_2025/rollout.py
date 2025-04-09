@@ -2,10 +2,11 @@ import torch
 
 class Rollout:
     
-    def __init__(self, generator, discriminator, update_rate, device='cpu'):
+    def __init__(self, generator, discriminator, rollout_num, update_rate, device='cpu'):
 
         self.generator = generator
         self.discriminator = discriminator
+        self.rollout_num = rollout_num
         self.update_rate = update_rate
         self.device = device
         
@@ -37,7 +38,7 @@ class Rollout:
 
         self._update_generator_copy()
         
-    def get_reward(self, sequences, rollout_num=16):
+    def get_reward(self, sequences):
 
         batch_size, seq_length = sequences.shape
         rewards = torch.zeros(batch_size, seq_length, device=self.device)
@@ -52,7 +53,7 @@ class Rollout:
             position_rewards = torch.zeros(batch_size, device=self.device)
             
             # Run multiple rollouts
-            for _ in range(rollout_num):
+            for _ in range(self.rollout_num):
                 # Complete the sequences from this position
                 completions = self._monte_carlo_search(sequences, fixed_length=position + 1)
                 
@@ -62,7 +63,7 @@ class Rollout:
                     position_rewards += completion_rewards
             
             # Average rewards across rollouts
-            rewards[:, position] = position_rewards / rollout_num
+            rewards[:, position] = position_rewards / self.rollout_num
         
         return rewards
     

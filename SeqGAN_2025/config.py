@@ -22,7 +22,7 @@ SEQ_LENGTH = 20
 START_TOKEN = 0
 GENERATED_NUM = 10000
 
-# Model hyperparameters
+# Model hyperparameters GENERATOR / ORACLE
 EMB_DIM = 32
 HIDDEN_DIM = 32
 
@@ -36,10 +36,7 @@ EVAL_FREQ = 5
 
 # Discriminator hyperparameters
 DIS_EMB_DIM = 64
-DIS_FILTER_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
-DIS_NUM_FILTERS = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
 DIS_DROPOUT = 0.1
-DIS_L2_REG = 0.2
 DIS_BATCH_SIZE = 64
 DIS_LR = 1e-4
 
@@ -49,11 +46,11 @@ DIS_INNER_EPOCHS = 3
 
 # Adversarial training parameters
 ADV_TOTAL_EPOCHS = 200
-ADV_G_STEPS = 1      # Generator updates per iteration
-ADV_D_STEPS = 5      # Discriminator update iterations
-ADV_D_EPOCHS = 3     # Discriminator epochs per update
-ROLLOUT_NUM = 16     # Number of rollouts for reward estimation
-ROLLOUT_UPDATE_RATE = 0.8  # Rate for updating rollout parameters
+ADV_G_STEPS = 1             # Generator updates per iteration
+ADV_D_STEPS = 5             # Discriminator update iterations
+ADV_D_EPOCHS = 3            # Discriminator epochs per update
+ROLLOUT_NUM = 16            # Number of rollouts for reward estimation
+ROLLOUT_UPDATE_RATE = 0.8   # Rate for updating rollout parameters
 
 # Paths for saving models
 ORACLE_PATH = os.path.join(SAVE_DIR, 'oracle.pth')
@@ -67,4 +64,4 @@ ADV_TRAIN_LOG = os.path.join(LOG_DIR, 'adversarial_train.txt')
 REWARD_LOG = os.path.join(LOG_DIR, 'rewards.txt')
 
 # Target LSTM params file
-TARGET_PARAMS_PATH = 'save/target_params_py3.pkl'  # Assuming you're using the same file as in your implementation
+TARGET_PARAMS_PATH = 'target_params.pkl'  # Assuming you're using the same file as in your implementation

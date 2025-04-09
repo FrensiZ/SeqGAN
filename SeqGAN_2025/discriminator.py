@@ -93,7 +93,7 @@ class Discriminator_CNN(nn.Module):
         self.num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
         self.sequence_length = sequence_length
         self.dropout_prob = dropout_prob
-        self.l2_reg_lambda = 0.01
+        self.l2_reg_lambda = 0.05
         self.highway_layers=1
         self.device = device
         
