@@ -1,8 +1,8 @@
 import torch
-import argparse
 import random
 import numpy as np
 import os
+import itertools
 from datetime import datetime
 
 # Import models and functions
@@ -12,8 +12,8 @@ from discriminator import (
     Discriminator, 
     Discriminator_Simple, 
     Discriminator_CNN, 
-    pretrain_discriminator, 
-    evaluate_discriminator
+    pretrain_discriminator 
+    #evaluate_discriminator
 )
 import config
 
@@ -57,75 +57,48 @@ def create_discriminator(disc_type, vocab_size, embedding_dim, hidden_dim, dropo
         raise ValueError(f"Unknown discriminator type: {disc_type}")
 
 def main():
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Test different discriminator architectures')
-    parser.add_argument('--gpu', type=int, default=-1, help='GPU ID to use (-1 for CPU)')
-    parser.add_argument('--seed', type=int, default=config.SEED, help='Random seed')
-    parser.add_argument('--output_dir', type=str, default='discriminator_tests', help='Output directory')
-    
-    # Discriminator configuration
-    parser.add_argument('--disc_type', type=str, default='cnn', 
-                        help='Discriminator type to test (simple, lstm, cnn)')
+
+    # ============ PARAMETERS (edit these) ============
+    # Grid search parameters
+    DISC_TYPES = ['cnn', 'lstm', 'simple']     # Options: 'simple', 'lstm', 'cnn'
+    SEEDS = [config.SEED]                      # Random seeds for reproducibility
     
     # Training parameters
-    parser.add_argument('--outer_epochs', type=int, default=config.DIS_OUTER_EPOCHS, 
-                        help='Number of outer training epochs')
-    parser.add_argument('--inner_epochs', type=int, default=config.DIS_INNER_EPOCHS, 
-                        help='Number of inner training epochs')
-    parser.add_argument('--batch_size', type=int, default=config.DIS_BATCH_SIZE, 
-                        help='Batch size')
-    parser.add_argument('--lr', type=float, default=config.DIS_LR, 
-                        help='Learning rate')
+    OUTER_EPOCHS = [50]                        # Number of outer training epochs
+    INNER_EPOCHS = [3]                         # Number of inner training epochs
+    BATCH_SIZES = [64, 128]                    # Batch sizes for training
+    LEARNING_RATES = [1e-4, 5e-4]              # Learning rates for optimizer
     
-    # Hyperparameters
-    parser.add_argument('--emb_dim', type=int, default=config.DIS_EMB_DIM, 
-                        help='Embedding dimension')
-    parser.add_argument('--hidden_dim', type=int, default=128, 
-                        help='Hidden dimension')
-    parser.add_argument('--dropout', type=float, default=config.DIS_DROPOUT, 
-                        help='Dropout rate')
+    # Discriminator hyperparameters
+    EMBEDDING_DIMS = [64, 128]                 # Embedding dimensions
+    HIDDEN_DIMS = [128, 256]                   # Hidden dimensions
+    DROPOUT_RATES = [0.1, 0.3]                 # Dropout rates
+    # =================================================
     
-    args = parser.parse_args()
-    
-    # Create output directory with timestamp and discriminator type
+    # Create base output directory with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = f"{args.output_dir}_{args.disc_type}_{timestamp}"
-    os.makedirs(output_dir, exist_ok=True)
+    base_output_dir = f"discriminator_grid_search_{timestamp}"
+    os.makedirs(base_output_dir, exist_ok=True)
     
-    # Set device
-    if args.gpu >= 0 and torch.cuda.is_available():
-        device = torch.device(f'cuda:{args.gpu}')
-        print(f"Using GPU: {args.gpu}")
-    else:
-        device = torch.device('cpu')
-        print("Using CPU")
+    # Use CPU for now (GPU assignment will be added later)
+    device = torch.device('cpu')
+    print("Using CPU")
     
-    # Set random seed
-    set_seed(args.seed)
+    # Save grid search configuration
+    with open(os.path.join(base_output_dir, 'grid_config.txt'), 'w') as f:
+        f.write(f"Discriminator Types: {DISC_TYPES}\n")
+        f.write(f"Seeds: {SEEDS}\n")
+        f.write(f"Outer Epochs: {OUTER_EPOCHS}\n")
+        f.write(f"Inner Epochs: {INNER_EPOCHS}\n")
+        f.write(f"Batch Sizes: {BATCH_SIZES}\n")
+        f.write(f"Learning Rates: {LEARNING_RATES}\n")
+        f.write(f"Embedding Dimensions: {EMBEDDING_DIMS}\n")
+        f.write(f"Hidden Dimensions: {HIDDEN_DIMS}\n")
+        f.write(f"Dropout Rates: {DROPOUT_RATES}\n")
     
-    # Save configuration
-    with open(os.path.join(output_dir, 'config.txt'), 'w') as f:
-        for arg in vars(args):
-            f.write(f"{arg}: {getattr(args, arg)}\n")
-    
-    # Initialize oracle and generator
-    target_lstm = TargetLSTM(
-        config.VOCAB_SIZE, 
-        config.EMB_DIM, 
-        config.HIDDEN_DIM, 
-        config.SEQ_LENGTH, 
-        config.START_TOKEN, 
-        device
-    ).to(device)
-    
-    generator = Generator(
-        config.VOCAB_SIZE, 
-        config.EMB_DIM, 
-        config.HIDDEN_DIM, 
-        config.SEQ_LENGTH, 
-        config.START_TOKEN, 
-        device
-    ).to(device)
+    # Initialize oracle and generator (shared across all experiments)
+    target_lstm = TargetLSTM(config.VOCAB_SIZE, config.EMB_DIM, config.HIDDEN_DIM, config.SEQ_LENGTH, config.START_TOKEN, device).to(device)
+    generator = Generator(config.VOCAB_SIZE, config.EMB_DIM, config.HIDDEN_DIM, config.SEQ_LENGTH, config.START_TOKEN, device).to(device)
     
     # Load oracle parameters
     print("Loading oracle parameters...")
@@ -140,42 +113,68 @@ def main():
         print("Pretrained generator not found. Please run generator pretraining first.")
         return
     
-    # Create discriminator based on specified type
-    print(f"\n===== Testing {args.disc_type} discriminator =====")
-    discriminator = create_discriminator(
-        disc_type=args.disc_type,
-        vocab_size=config.VOCAB_SIZE,
-        embedding_dim=args.emb_dim,
-        hidden_dim=args.hidden_dim,
-        dropout=args.dropout,
-        device=device
-    )
+    # Create a grid of all parameter combinations
+    param_grid = list(itertools.product(
+        DISC_TYPES, SEEDS, OUTER_EPOCHS, INNER_EPOCHS, BATCH_SIZES, 
+        LEARNING_RATES, EMBEDDING_DIMS, HIDDEN_DIMS, DROPOUT_RATES
+    ))
     
-    # Create optimizer
-    optimizer = torch.optim.Adam(discriminator.parameters(), lr=args.lr)
+    print(f"Total number of experiments: {len(param_grid)}")
     
-    # Create log file
-    log_file = os.path.join(output_dir, f'{args.disc_type}_discriminator.log')
-    
-    # Train discriminator using the existing function
-    pretrain_discriminator(
-        target_lstm=target_lstm,
-        generator=generator,
-        discriminator=discriminator,
-        optimizer=optimizer,
-        outer_epochs=args.outer_epochs,
-        inner_epochs=args.inner_epochs,
-        batch_size=args.batch_size,
-        generated_num=config.GENERATED_NUM,
-        log_file=log_file,
-        device=device
-    )
-    
-    # Save the trained discriminator
-    model_path = os.path.join(output_dir, f'{args.disc_type}_discriminator.pth')
-    torch.save(discriminator.state_dict(), model_path)
-    print(f"\nTraining completed. Model saved to: {model_path}")
-    print(f"Log file saved to: {log_file}")
+    # Run each experiment in the grid
+    for i, params in enumerate(param_grid):
+
+        (disc_type, seed, outer_epochs, inner_epochs, batch_size, 
+         learning_rate, embedding_dim, hidden_dim, dropout_rate) = params
+        
+        print(f"\n===== Experiment {i+1}/{len(param_grid)} =====")
+        print(f"Testing {disc_type} discriminator with:")
+        print(f"  Seed: {seed}")
+        print(f"  Batch Size: {batch_size}")
+        print(f"  Learning Rate: {learning_rate}")
+        print(f"  Embedding Dim: {embedding_dim}")
+        print(f"  Hidden Dim: {hidden_dim}")
+        print(f"  Dropout Rate: {dropout_rate}")
+        
+        # Set seed for reproducibility
+        set_seed(seed)
+        
+        # Create experiment directory
+        exp_dir = os.path.join(base_output_dir, f"exp_{i+1}_{disc_type}_bs{batch_size}_lr{learning_rate}_emb{embedding_dim}_hid{hidden_dim}_drop{dropout_rate}")
+        os.makedirs(exp_dir, exist_ok=True)
+        
+        # Create discriminator
+        discriminator = create_discriminator(disc_type=disc_type, vocab_size=config.VOCAB_SIZE, embedding_dim=embedding_dim, hidden_dim=hidden_dim, dropout=dropout_rate, device=device)
+        
+        # Create optimizer
+        d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=learning_rate)
+        
+        # Save configuration for this experiment
+        with open(os.path.join(exp_dir, 'config.txt'), 'w') as f:
+            f.write(f"Discriminator Type: {disc_type}\n")
+            f.write(f"Seed: {seed}\n")
+            f.write(f"Outer Epochs: {outer_epochs}\n")
+            f.write(f"Inner Epochs: {inner_epochs}\n")
+            f.write(f"Batch Size: {batch_size}\n")
+            f.write(f"Learning Rate: {learning_rate}\n")
+            f.write(f"Embedding Dimension: {embedding_dim}\n")
+            f.write(f"Hidden Dimension: {hidden_dim}\n")
+            f.write(f"Dropout Rate: {dropout_rate}\n")
+        
+        # Create log file
+        log_file = os.path.join(exp_dir, f'{disc_type}_discriminator.log')
+        
+        # Train discriminator
+        pretrain_discriminator(target_lstm=target_lstm, generator=generator, discriminator=discriminator, optimizer=d_optimizer, 
+                               outer_epochs=outer_epochs, inner_epochs=inner_epochs, batch_size=batch_size, generated_num=config.GENERATED_NUM, 
+                               log_file=log_file, device=device)
+        
+        # Save the trained discriminator
+        model_path = os.path.join(exp_dir, f'{disc_type}_discriminator.pth')
+        torch.save(discriminator.state_dict(), model_path)
+        print(f"Model saved to: {model_path}")
+
+    print(f"\nAll experiments completed. Results saved to: {base_output_dir}")
 
 if __name__ == "__main__":
     main()
