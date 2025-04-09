@@ -338,7 +338,7 @@ def evaluate_discriminator(discriminator, target_lstm, generator, num_samples, d
 
 def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, device):
     
-    print('Start pre-training discriminator...')
+    #print('Start pre-training discriminator...')
     
     # Open log file
     log = open(log_file, 'w')
@@ -389,7 +389,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             log_str += f'accuracy:\t{eval_metrics["accuracy"]:.4f}\t'
             log_str += f'real_prob\t{eval_metrics["real_prob"]:.4f}\tfake_prob\t{eval_metrics["fake_prob"]:.4f}'
             
-            print(log_str)
+            #print(log_str)
             log.write(log_str + '\n')
             log.flush()
     
@@ -397,5 +397,5 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     
     #torch.save(discriminator.state_dict(), 'discriminator_pretrained.pth')
     
-    print('Discriminator pretraining finished!')
+    #print('Discriminator pretraining finished!')
 
