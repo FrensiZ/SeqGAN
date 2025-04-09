@@ -19,8 +19,6 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
 
 
-### TARGET LSTM
-
 class TargetLSTM(nn.Module):
 
     def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device='cpu'):
@@ -148,10 +146,6 @@ class TargetLSTM(nn.Module):
         with open(file_path, 'w') as f:
             for sample in samples.cpu().numpy():
                 f.write(' '.join([str(int(x)) for x in sample]) + '\n')
-
-
-
-### GENERATOR
 
 class Generator(nn.Module):
 
@@ -329,12 +323,86 @@ def generator_adversarial_update(generator, sequences, rewards, optimizer):
     
     return loss.item()
 
+class Discriminator_Simple(nn.Module):
 
-### DISCRIMINATOR
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, num_layers=2, device='cpu'):
+        super(Discriminator_Simple, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.device = device
+        
+        # Embedding layer
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        
+        # LSTM layer
+        self.lstm = nn.LSTM(
+            embedding_dim, 
+            hidden_dim, 
+            num_layers=num_layers, 
+            batch_first=True,
+            dropout=dropout_rate if num_layers > 1 else 0
+        )
+        
+        # Output layer
+        self.fc = nn.Linear(hidden_dim, 1)
+        
+        # Move to device
+        self.to(device)
+    
+    def forward(self, x):
+        # Embedding
+        embedded = self.embedding(x)
+        
+        # LSTM processing - get final hidden state
+        _, (hidden, _) = self.lstm(embedded)
+        
+        # Take the final hidden state from the last layer
+        final_hidden = hidden[-1]
+        
+        # Pass through the linear layer
+        logits = self.fc(final_hidden)
+        
+        return logits.squeeze(-1)  # Return shape: [batch_size]
+    
+    def get_reward(self, x):
+
+        with torch.no_grad():
+            logits = self.forward(x)
+            rewards = torch.sigmoid(logits)     # Convert to probabilities
+            return rewards
+    
+    def train_step(self, real_data, generated_data, optimizer):
+
+        optimizer.zero_grad()
+        
+        # Prepare inputs and targets
+        batch_size = real_data.size(0)
+
+        inputs = torch.cat([real_data, generated_data], dim=0)
+        
+        targets = torch.cat([
+            torch.ones(batch_size, device=self.device), 
+            torch.zeros(batch_size, device=self.device)
+        ], dim=0)
+        
+        # Forward pass
+        logits = self.forward(inputs)
+        
+        # Calculate loss
+        loss = F.binary_cross_entropy_with_logits(logits, targets)
+        
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        
+        return loss.item()
 
 class Discriminator(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers, dropout_rate, device='cpu'):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, num_layers=1, device='cpu'):
         
         super(Discriminator, self).__init__()
         
@@ -411,6 +479,146 @@ class Discriminator(nn.Module):
         loss = F.binary_cross_entropy_with_logits(logits, targets)
         
         # Backpropagation
+        loss.backward()
+        optimizer.step()
+        
+        return loss.item()
+
+class Discriminator_CNN(nn.Module):
+
+    def __init__(self, vocab_size, embedding_dim, sequence_length, dropout_prob=0.1, device='cpu'):
+        
+        super(Discriminator_CNN, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
+        self.num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
+        self.sequence_length = sequence_length
+        self.dropout_prob = dropout_prob
+        self.l2_reg_lambda = 0.01
+        self.highway_layers=1
+        self.device = device
+        
+        # Word embeddings
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        
+        # Convolutional layers
+        self.convs = nn.ModuleList([
+            nn.Conv2d(
+                in_channels=1, 
+                out_channels=self.num_filters[i], 
+                kernel_size=(filter_size, embedding_dim), 
+                stride=1
+            ) for i, filter_size in enumerate(self.filter_sizes)
+        ])
+        
+        self.num_filters_total = sum(self.num_filters)
+        
+        # Highway network components
+        self.highway_transforms = nn.ModuleList()
+        self.highway_gates = nn.ModuleList()
+        
+        for i in range(self.highway_layers):
+            transform = nn.Linear(self.num_filters_total, self.num_filters_total)
+            gate = nn.Linear(self.num_filters_total, self.num_filters_total)
+            
+            # Initialize gate bias to negative value to start with identity mappings
+            nn.init.constant_(gate.bias, -2.0)
+            
+            self.highway_transforms.append(transform)
+            self.highway_gates.append(gate)
+        
+        self.dropout = nn.Dropout(dropout_prob)
+        self.output_layer = nn.Linear(self.num_filters_total, 1)
+        
+        self._init_weights()
+        self.to(device)
+    
+    def _init_weights(self):
+        for conv in self.convs:
+            nn.init.xavier_uniform_(conv.weight)
+            nn.init.constant_(conv.bias, 0.1)
+        
+        nn.init.xavier_uniform_(self.output_layer.weight)
+        nn.init.constant_(self.output_layer.bias, 0.1)
+    
+    def _highway_layer(self, x, transform, gate):
+        """Apply a single highway layer transformation"""
+        transform_result = F.relu(transform(x))
+        gate_result = torch.sigmoid(gate(x))
+        
+        return gate_result * transform_result + (1 - gate_result) * x
+    
+    def forward(self, x):
+        embedded = self.embeddings(x)
+        embedded = embedded.unsqueeze(1)
+        
+        pooled_outputs = []
+        for i, conv in enumerate(self.convs):
+            # Conv layer
+            conv_out = F.relu(conv(embedded))
+            
+            # Max-pooling
+            pool_out = F.max_pool2d(
+                conv_out, 
+                kernel_size=(conv_out.size(2), 1)
+            )
+            
+            pooled_outputs.append(pool_out)
+        
+        # Concatenate all pooled features
+        pooled_concat = torch.cat(pooled_outputs, dim=1)
+        pooled_flat = pooled_concat.view(-1, self.num_filters_total)
+        
+        # Highway network
+        highway_out = pooled_flat
+        for transform, gate in zip(self.highway_transforms, self.highway_gates):
+            highway_out = self._highway_layer(highway_out, transform, gate)
+        
+        # Dropout
+        dropped = self.dropout(highway_out)
+        
+        # Output layer - return logits
+        logits = self.output_layer(dropped).squeeze(-1)
+        
+        return logits
+    
+    def get_reward(self, x):
+
+        with torch.no_grad():
+            logits = self.forward(x)
+            rewards = torch.sigmoid(logits)
+            return rewards
+    
+    def train_step(self, real_data, generated_data, optimizer):
+
+        optimizer.zero_grad()
+        
+        # Prepare inputs
+        batch_size = real_data.size(0)
+        
+        # Forward pass for real data
+        real_logits = self.forward(real_data)
+        real_labels = torch.ones(batch_size, device=self.device)
+        real_loss = F.binary_cross_entropy_with_logits(real_logits, real_labels)
+        
+        # Forward pass for fake data
+        fake_logits = self.forward(generated_data)
+        fake_labels = torch.zeros(batch_size, device=self.device)
+        fake_loss = F.binary_cross_entropy_with_logits(fake_logits, fake_labels)
+        
+        # Combined loss
+        loss = real_loss + fake_loss
+        
+        # Add L2 regularization if specified
+        if self.l2_reg_lambda > 0:
+            l2_reg = 0.0
+            for param in self.parameters():
+                l2_reg += torch.norm(param, 2)
+            loss += self.l2_reg_lambda * l2_reg
+        
+        # Backpropagation and optimization
         loss.backward()
         optimizer.step()
         
@@ -509,9 +717,6 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     torch.save(discriminator.state_dict(), 'discriminator_pretrained.pth')
     
     print('Discriminator pretraining finished!')
-
-
-### ROLLOUT
 
 class Rollout:
     
@@ -628,19 +833,24 @@ class Rollout:
         
         return completed_sequences
 
-
-### ADVERSIAL SETUP
-
-def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_optimizer, num_epochs, batch_size, generated_num, g_steps, d_steps, k_epochs, log_path):
+def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_optimizer, num_epochs, batch_size, generated_num, g_steps, d_steps, k_epochs, log_path, log_path_reward):
     
     # Open log file
     log = open(log_path, 'w')
+    log.write('epoch\tnll\tpg_loss\td_loss\td_accuracy\treal_prob\tfake_prob\tavg_reward\n')
+    
+    # Optional: Create a separate reward log file if needed
+    reward_log = open(log_path_reward, 'w')
+    reward_log.write('epoch\tposition\treward\n')
     
     for epoch in range(num_epochs):
-        
+
         print(f"Epoch {epoch}")
         
         # GENERATOR TRAINING PHASE
+        pg_losses = []
+        avg_token_rewards = []
+        
         for _ in range(g_steps):
             # Generate sequences
             generator.train()
@@ -649,16 +859,33 @@ def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_
             # Get rewards using rollout
             rewards = rollout.get_reward(sequences)
             
+            # Track per-token rewards
+            avg_position_rewards = rewards.mean(dim=0).cpu().numpy()  # Average across batch for each position
+            avg_token_rewards.append(avg_position_rewards.mean())  # Overall average reward
+
+            # Log per-position rewards for EVERY epoch
+            for pos, reward in enumerate(avg_position_rewards):
+                reward_log.write(f"{epoch}\t{pos}\t{reward:.6f}\n")
+            
             # Update generator using policy gradient
-            g_loss = generator_adversarial_update(generator, sequences, rewards, g_optimizer)
+            pg_loss = generator_adversarial_update(generator, sequences, rewards, g_optimizer)
+            pg_losses.append(pg_loss)
+        
+        # Flush the reward log every epoch to ensure data is written
+        reward_log.flush()
+        
+        # Average PG loss for this epoch
+        avg_pg_loss = sum(pg_losses) / len(pg_losses) if pg_losses else 0
+        avg_reward = sum(avg_token_rewards) / len(avg_token_rewards) if avg_token_rewards else 0
         
         # Update rollout module with new generator parameters
         rollout.update_params()
         
         # DISCRIMINATOR TRAINING PHASE
+        d_losses = []
+        
         for _ in range(d_steps):
-            
-            # Data generation
+            # Generate new data for discriminator training
             target_lstm.eval()
             generator.eval()
             positive_examples = target_lstm.generate(generated_num)
@@ -670,31 +897,45 @@ def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_
             
             # Train discriminator for k epochs
             for _ in range(k_epochs):
-                d_losses = []
+                batch_d_losses = []
                 for (pos_batch,), (neg_batch,) in zip(pos_loader, neg_loader):
                     d_loss = discriminator.train_step(pos_batch, neg_batch, d_optimizer)
-                    d_losses.append(d_loss)
+                    batch_d_losses.append(d_loss)
+                
+                if batch_d_losses:
+                    d_losses.append(sum(batch_d_losses) / len(batch_d_losses))
+        
+        # Average discriminator loss
+        avg_d_loss = sum(d_losses) / len(d_losses) if d_losses else 0
         
         # EVALUATION PHASE
-        if epoch % 5 == 0 or epoch == num_epochs - 1:
+        if epoch % 1 == 0 or epoch == num_epochs - 1:
+            
             generator.eval()
+            
             # Generate samples for evaluation
             eval_samples = generator.generate(generated_num)
-            
             # Calculate NLL using oracle
             nll = target_lstm.calculate_nll(eval_samples)
             
-            # Log metrics
-            print(f"Epoch {epoch}, NLL: {nll:.4f}")
-            log.write(f"epoch:\t{epoch}\tnll:\t{nll:.4f}\n")
-            log.flush()
+            # Evaluate discriminator performance
+            disc_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000, device=generator.device)
+            d_accuracy = disc_metrics['accuracy']
+            real_prob = disc_metrics['real_prob']
+            fake_prob = disc_metrics['fake_prob']
             
+            # Log all metrics
+            metrics_str = f"Epoch {epoch}, NLL: {nll:.4f}, PG Loss: {avg_pg_loss:.4f}, D Loss: {avg_d_loss:.4f}, "
+            metrics_str += f"D Acc: {d_accuracy:.4f}, Real Prob: {real_prob:.4f}, Fake Prob: {fake_prob:.4f}, Avg Reward: {avg_reward:.4f}"
+            print(metrics_str)
+            
+            # Write to log file
+            log.write(f"{epoch}\t{nll:.6f}\t{avg_pg_loss:.6f}\t{avg_d_loss:.6f}\t{d_accuracy:.6f}\t{real_prob:.6f}\t{fake_prob:.6f}\t{avg_reward:.6f}\n")
+            log.flush()
+    
     log.close()
+    reward_log.close()
     print("Training completed!")
-
-
-
-### INITALIZATION
 
 # Initialize models
 VOCAB_SIZE = 5000
@@ -713,32 +954,31 @@ generated_num = 10000
 # Discriminator hyperparameters
 DIS_EMB_DIM = 64
 DIS_HIDDEN_DIM = 128
-DIS_NUM_LAYERS = 1
 DIS_DROPOUT = 0.01
 DIS_BATCH_SIZE = 64
 OUTER_EPOCHS = 50
 INNER_EPOCHS = 1
+
+log_folder = "logs"
 
 # Create models
 target_lstm = TargetLSTM(VOCAB_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, device)
 target_lstm.load_params(params_path='save/target_params_py3.pkl')
 generator = Generator(VOCAB_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, device)
 generator.load_state_dict(torch.load('generator_pretrained.pth', weights_only=False))
-discriminator = Discriminator(VOCAB_SIZE, DIS_EMB_DIM, DIS_HIDDEN_DIM, DIS_NUM_LAYERS, DIS_DROPOUT, device)
 
-
-### PRETRAINING
+#discriminator = Discriminator(VOCAB_SIZE, DIS_EMB_DIM, DIS_HIDDEN_DIM, dropout_rate=0.0, num_layers=1, device=1)
+#discriminator = Discriminator_Simple(VOCAB_SIZE, DIS_EMB_DIM, DIS_HIDDEN_DIM, DIS_DROPOUT, device=device)
+discriminator = Discriminator_CNN(VOCAB_SIZE, DIS_EMB_DIM, SEQ_LENGTH, dropout_prob=0.1, device=device)
 
 # Initialize optimizer
 g_optimizer = torch.optim.Adam(generator.parameters(), lr=6e-3)
 d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-3)
 
 # PRETRAINING
-pretrain_generator(target_lstm, generator, g_optimizer, PRE_EPOCH_NUM, BATCH_SIZE, generated_num, eval_freq=5, lr_patience=5, lr_decay=0.5, log_path='generator_train.txt')
-pretrain_discriminator(target_lstm, generator, discriminator, d_optimizer, OUTER_EPOCHS, INNER_EPOCHS, DIS_BATCH_SIZE, generated_num, 'discriminator_pretrain.txt', device)
+pretrain_generator(target_lstm, generator, g_optimizer, PRE_EPOCH_NUM, BATCH_SIZE, generated_num, eval_freq=5, lr_patience=5, lr_decay=0.5, log_path=f"{log_folder}/generator_train.txt")
+pretrain_discriminator(target_lstm, generator, discriminator, d_optimizer, OUTER_EPOCHS, INNER_EPOCHS, DIS_BATCH_SIZE, generated_num, f"{log_folder}/discriminator_pretrain.txt", device)
 
-
-### ADVERSIAL TRAINING
 
 # Adversarial training parameters
 TOTAL_BATCH = 200
@@ -764,6 +1004,5 @@ train_seqgan(
     generator, discriminator, rollout, target_lstm, 
     g_optimizer, d_optimizer, TOTAL_BATCH,
     BATCH_SIZE, generated_num, G_STEPS, D_STEPS, K_EPOCHS,
-    log_path='adversarial_training_log.txt'
+    log_path=f"{log_folder}/adversarial_training_log.txt", log_path_reward=f"{log_folder}/rewards_log.txt"
 )
-
