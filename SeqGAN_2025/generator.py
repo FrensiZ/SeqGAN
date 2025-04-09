@@ -145,7 +145,7 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
 
     log.close()
     
-    torch.save(generator.state_dict(), 'generator_pretrained.pth')
+    #torch.save(generator.state_dict(), 'generator_pretrained.pth')
     
     print('Pretraining finished!')
     

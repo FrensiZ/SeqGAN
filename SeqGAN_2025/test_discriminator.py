@@ -11,8 +11,8 @@ from discriminator import (
     Discriminator, 
     Discriminator_Simple, 
     Discriminator_CNN, 
-    pretrain_discriminator, 
-    evaluate_discriminator
+    pretrain_discriminator
+    #evaluate_discriminator
 )
 import config
 

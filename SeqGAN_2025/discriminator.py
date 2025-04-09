@@ -345,8 +345,8 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     log.write('Discriminator pre-training...\n')
     
     # Initial evaluation
-    metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000, device=device)
-    print(f"Initial accuracy: {metrics['accuracy']:.4f}")
+    #metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000, device=device)
+    #print(f"Initial accuracy: {metrics['accuracy']:.4f}")
     
     total_epochs = 0
     
@@ -395,7 +395,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     
     log.close()
     
-    torch.save(discriminator.state_dict(), 'discriminator_pretrained.pth')
+    #torch.save(discriminator.state_dict(), 'discriminator_pretrained.pth')
     
     print('Discriminator pretraining finished!')
 
