@@ -336,7 +336,7 @@ def evaluate_discriminator(discriminator, target_lstm, generator, num_samples, d
     
     return metrics
 
-def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, device, metrics=None):
+def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, device):
         
     # Open log file
     log = open(log_file, 'w')
@@ -344,7 +344,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     
     total_epochs = 0
     
-    # Outer loop (50 times)
+    # Outer loop
     for outer_epoch in range(outer_epochs):
 
         # Generate positive samples from the oracle (only once)
@@ -369,7 +369,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             total_loss = 0
             num_batches = 0
             
-            # Iterate through batches (same data for all inner epochs)
+            # Iterate through batches
             for (pos_batch,), (neg_batch,) in zip(pos_loader, neg_loader):
                 loss = discriminator.train_step(pos_batch, neg_batch, optimizer)
                 total_loss += loss
@@ -383,16 +383,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             log_str += f'accuracy:\t{eval_metrics["accuracy"]:.4f}\t'
             log_str += f'real_prob\t{eval_metrics["real_prob"]:.4f}\tfake_prob\t{eval_metrics["fake_prob"]:.4f}'
             
-            #print(log_str)
             log.write(log_str + '\n')
             log.flush()
-            
-            # Store metrics if dictionary is provided
-            if metrics is not None:
-                metrics['loss'].append(avg_loss)
-                metrics['accuracy'].append(eval_metrics['accuracy'])
-                metrics['real_prob'].append(eval_metrics['real_prob'])
-                metrics['fake_prob'].append(eval_metrics['fake_prob'])
     
     log.close()
-

@@ -3,11 +3,9 @@ import torch as th
 import subprocess
 from pathlib import Path
 import json
-import numpy as np
 import itertools
 import time
 import hashlib
-import pickle
 
 N_SEEDS = 3  # Number of random seeds to test each configuration
 
@@ -27,7 +25,8 @@ def get_free_gpu():
             if used < 100 and util < 5:
                 free_gpus.append(i)
         return free_gpus[0] if free_gpus else None
-    except:
+    except Exception as e:
+        print(f"Error checking GPU status: {e}")
         return None
 
 def generate_configs():
@@ -53,6 +52,7 @@ def run_training(config, gpu_id, seed, config_id):
     os.makedirs(output_dir, exist_ok=True)
     os.chmod(output_dir, 0o775)
     
+    # Save the configuration JSON
     with open(output_dir / "config.json", "w") as f:
         json.dump(config, f)
     
@@ -139,8 +139,7 @@ def main():
         
         time.sleep(4)
     
-    print("\nAll processes completed, analyzing results...")
-    analyze_results(base_dir)
+    print("\nAll processes completed!")
 
 if __name__ == "__main__":
     main()

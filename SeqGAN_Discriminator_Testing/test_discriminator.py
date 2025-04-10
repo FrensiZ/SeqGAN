@@ -3,7 +3,6 @@ import random
 import numpy as np
 import os
 import json
-import pickle
 from pathlib import Path
 
 # Import models and functions
@@ -13,8 +12,7 @@ from discriminator import (
     Discriminator, 
     Discriminator_Simple, 
     Discriminator_CNN, 
-    pretrain_discriminator,
-    evaluate_discriminator
+    pretrain_discriminator
 )
 import config
 
@@ -78,15 +76,15 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
     
-    # Extract parameters from config
-    disc_type = params.get('disc_type', 'cnn')
-    batch_size = params.get('batch_size', 64)
-    learning_rate = params.get('learning_rate', 1e-4)
-    embedding_dim = params.get('embedding_dim', 64)
-    hidden_dim = params.get('hidden_dim', 128)
-    dropout_rate = params.get('dropout_rate', 0.1)
-    outer_epochs = params.get('outer_epochs', 50)
-    inner_epochs = params.get('inner_epochs', 3)
+    # Extract parameters from config - no default values
+    disc_type = params['disc_type']
+    batch_size = params['batch_size']
+    learning_rate = params['learning_rate']
+    embedding_dim = params['embedding_dim']
+    hidden_dim = params['hidden_dim']
+    dropout_rate = params['dropout_rate']
+    outer_epochs = params['outer_epochs']
+    inner_epochs = params['inner_epochs']
     
     print(f"Training {disc_type} discriminator with:")
     print(f"  Seed: {seed}")
@@ -145,33 +143,6 @@ def main():
     # Create log file
     log_file = base_dir / f"discriminator_training.log"
     
-    # Store metrics for tracking progress
-    metrics = {
-        'loss': [],
-        'accuracy': [],
-        'real_prob': [],
-        'fake_prob': []
-    }
-    
-    # Initial evaluation
-    initial_metrics = evaluate_discriminator(
-        discriminator, 
-        target_lstm, 
-        generator, 
-        num_samples=1000, 
-        device=device
-    )
-    
-    print(f"Initial metrics:")
-    print(f"  Accuracy: {initial_metrics['accuracy']:.4f}")
-    print(f"  Real Probability: {initial_metrics['real_prob']:.4f}")
-    print(f"  Fake Probability: {initial_metrics['fake_prob']:.4f}")
-    
-    # Store initial metrics
-    for key in metrics:
-        if key in initial_metrics:
-            metrics[key].append(initial_metrics[key])
-    
     # Train discriminator
     pretrain_discriminator(
         target_lstm=target_lstm,
@@ -183,52 +154,10 @@ def main():
         batch_size=batch_size,
         generated_num=config.GENERATED_NUM,
         log_file=log_file,
-        device=device,
-        metrics=metrics  # Pass metrics dictionary to store values
-    )
-    
-    # Final evaluation
-    final_metrics = evaluate_discriminator(
-        discriminator, 
-        target_lstm, 
-        generator, 
-        num_samples=2000, 
         device=device
     )
     
-    print(f"\nFinal evaluation:")
-    print(f"  Accuracy: {final_metrics['accuracy']:.4f}")
-    print(f"  Real Probability: {final_metrics['real_prob']:.4f}")
-    print(f"  Fake Probability: {final_metrics['fake_prob']:.4f}")
-    
-    # Store results
-    results = {
-        'config': params,
-        'seed': seed,
-        'final_metrics': final_metrics,
-        'metrics': metrics
-    }
-    
-    # Save results
-    results_path = base_dir / "discriminator_results.pkl"
-    with open(results_path, 'wb') as f:
-        pickle.dump(results, f)
-    
-    # Also save as JSON for easier inspection
-    with open(base_dir / "discriminator_results.json", 'w') as f:
-        # Convert numpy values to Python types
-        json_results = {
-            'config': params,
-            'seed': seed,
-            'final_metrics': {k: float(v) for k, v in final_metrics.items()},
-            'metrics': {k: [float(val) for val in v] for k, v in metrics.items()}
-        }
-        json.dump(json_results, f, indent=2)
-    
-    # Save the trained discriminator
-    torch.save(discriminator.state_dict(), base_dir / f"discriminator_{disc_type}.pth")
-    
-    print(f"Training completed! Results saved to {results_path}")
+    print(f"Training completed! Logs saved to {log_file}")
 
 if __name__ == "__main__":
     main()
