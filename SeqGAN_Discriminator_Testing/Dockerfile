@@ -50,7 +50,7 @@ COPY --chown=myuser:users target_params.pkl ${WORKING_DIR}/saved_models/
 # Set environment variables
 ENV PYTHONPATH="${WORKING_DIR}"
 ENV PYTHONUNBUFFERED=1
-ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_VISIBLE_DEVICES=0,1,2,3
 
 # Default command set to run the parallel discriminator testing
 CMD ["python3", "discriminator_parallel.py"]
