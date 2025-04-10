@@ -29,4 +29,4 @@ ORACLE_PATH = os.path.join(SAVE_DIR, 'oracle.pth')
 GEN_PRETRAIN_PATH = os.path.join(SAVE_DIR, 'generator_pretrained.pth')
 
 # Target LSTM params file
-TARGET_PARAMS_PATH = 'target_params.pkl' 
+TARGET_PARAMS_PATH = os.path.join(SAVE_DIR, 'target_params.pkl')
