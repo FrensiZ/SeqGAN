@@ -42,7 +42,7 @@ RUN useradd -u 3754 -g 100 -m myuser && \
 USER myuser
 
 # Copy the SeqGAN files
-COPY --chown=myuser:users config.py discriminator.py generator.py oracle.py rollout.py pretrain.py test_discriminator.py discriminator_parallel.py ${WORKING_DIR}/
+COPY --chown=myuser:users config.py discriminator.py generator.py oracle.py test_discriminator.py discriminator_parallel.py ${WORKING_DIR}/
 
 # Copy the target_params.pkl to the saved_models directory
 COPY --chown=myuser:users target_params.pkl ${WORKING_DIR}/saved_models/
