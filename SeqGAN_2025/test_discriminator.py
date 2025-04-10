@@ -1,12 +1,10 @@
-#### 1. RUN TEST ON GPU
-
-
-
 import torch
 import random
 import numpy as np
 import os
-import itertools
+import json
+import pickle
+from pathlib import Path
 
 # Import models and functions
 from oracle import TargetLSTM
@@ -15,8 +13,8 @@ from discriminator import (
     Discriminator, 
     Discriminator_Simple, 
     Discriminator_CNN, 
-    pretrain_discriminator
-    #evaluate_discriminator
+    pretrain_discriminator,
+    evaluate_discriminator
 )
 import config
 
@@ -60,32 +58,47 @@ def create_discriminator(disc_type, vocab_size, embedding_dim, hidden_dim, dropo
         raise ValueError(f"Unknown discriminator type: {disc_type}")
 
 def main():
-    # ============ PARAMETERS (edit these) ============
-    # Grid search parameters
-    DISC_TYPES = ['cnn', 'lstm', 'simple']     # Options: 'simple', 'lstm', 'cnn'
-    SEEDS = [config.SEED]                      # Random seeds for reproducibility
+    # Get working directory
+    base_dir = Path(os.getenv('OUTPUT_DIR', '.'))
+    os.makedirs(base_dir, exist_ok=True)
     
-    # Training parameters
-    OUTER_EPOCHS = [2]                         # Number of outer training epochs
-    INNER_EPOCHS = [2]                         # Number of inner training epochs
-    BATCH_SIZES = [64, 128]                    # Batch sizes for training
-    LEARNING_RATES = [1e-4, 5e-4]              # Learning rates for optimizer
+    # Load configuration
+    config_path = os.getenv('CONFIG_PATH', '')
+    if not config_path:
+        raise ValueError("CONFIG_PATH environment variable not set")
     
-    # Discriminator hyperparameters
-    EMBEDDING_DIMS = [64, 128]                 # Embedding dimensions
-    HIDDEN_DIMS = [128, 256]                   # Hidden dimensions
-    DROPOUT_RATES = [0.1, 0.3]                 # Dropout rates
-    # =================================================
+    with open(config_path, 'r') as f:
+        params = json.load(f)
     
-    # Create base output directory
-    base_output_dir = "discriminator_test"
-    os.makedirs(base_output_dir, exist_ok=True)
+    # Set seed for reproducibility
+    seed = int(os.getenv('SEED', '0'))
+    set_seed(seed)
     
-    # Use CPU for now (GPU assignment will be added later)
-    device = torch.device('cpu')
-    print("Using CPU")
+    # Use GPU if available
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
     
-    # Initialize oracle and generator (shared across all experiments)
+    # Extract parameters from config
+    disc_type = params.get('disc_type', 'cnn')
+    batch_size = params.get('batch_size', 64)
+    learning_rate = params.get('learning_rate', 1e-4)
+    embedding_dim = params.get('embedding_dim', 64)
+    hidden_dim = params.get('hidden_dim', 128)
+    dropout_rate = params.get('dropout_rate', 0.1)
+    outer_epochs = params.get('outer_epochs', 50)
+    inner_epochs = params.get('inner_epochs', 3)
+    
+    print(f"Training {disc_type} discriminator with:")
+    print(f"  Seed: {seed}")
+    print(f"  Batch Size: {batch_size}")
+    print(f"  Learning Rate: {learning_rate}")
+    print(f"  Embedding Dim: {embedding_dim}")
+    print(f"  Hidden Dim: {hidden_dim}")
+    print(f"  Dropout Rate: {dropout_rate}")
+    print(f"  Outer Epochs: {outer_epochs}")
+    print(f"  Inner Epochs: {inner_epochs}")
+    
+    # Initialize oracle and generator
     target_lstm = TargetLSTM(
         config.VOCAB_SIZE, 
         config.EMB_DIM, 
@@ -93,7 +106,7 @@ def main():
         config.SEQ_LENGTH, 
         config.START_TOKEN, 
         device
-    )
+    ).to(device)
     
     generator = Generator(
         config.VOCAB_SIZE, 
@@ -102,77 +115,120 @@ def main():
         config.SEQ_LENGTH, 
         config.START_TOKEN, 
         device
-    )
+    ).to(device)
     
     # Load oracle parameters
     print("Loading oracle parameters...")
     target_lstm.load_params(config.TARGET_PARAMS_PATH)
     
-    # If generator pretrained exists, load it
-    if os.path.exists(config.GEN_PRETRAIN_PATH):
-        print("Loading pretrained generator...")
-        generator.load_state_dict(torch.load(config.GEN_PRETRAIN_PATH, map_location=device, weights_only=False))
-    else:
-        # If generator isn't available, we can't proceed with discriminator testing
-        print("Pretrained generator not found. Please run generator pretraining first.")
-        return
+    # Load pretrained generator
+    gen_path = os.getenv('GEN_PATH', '')
+    if not gen_path:
+        raise ValueError("GEN_PATH environment variable not set")
+        
+    print(f"Loading pretrained generator from {gen_path}...")
+    generator.load_state_dict(torch.load(gen_path, map_location=device))
     
-    # Create a grid of all parameter combinations
-    param_grid = list(itertools.product(
-        DISC_TYPES, SEEDS, OUTER_EPOCHS, INNER_EPOCHS, BATCH_SIZES, 
-        LEARNING_RATES, EMBEDDING_DIMS, HIDDEN_DIMS, DROPOUT_RATES
-    ))
+    # Create discriminator
+    discriminator = create_discriminator(
+        disc_type=disc_type,
+        vocab_size=config.VOCAB_SIZE,
+        embedding_dim=embedding_dim,
+        hidden_dim=hidden_dim,
+        dropout=dropout_rate,
+        device=device
+    ).to(device)
     
-    print(f"Total number of experiments: {len(param_grid)}")
+    # Create optimizer
+    optimizer = torch.optim.Adam(discriminator.parameters(), lr=learning_rate)
     
-    # Run each experiment in the grid
-    for i, params in enumerate(param_grid):
-        (disc_type, seed, outer_epochs, inner_epochs, batch_size, 
-         learning_rate, embedding_dim, hidden_dim, dropout_rate) = params
-        
-        print(f"\n===== Experiment {i+1}/{len(param_grid)} =====")
-        print(f"Testing {disc_type} discriminator with:")
-        print(f"  Seed: {seed}")
-        print(f"  Batch Size: {batch_size}")
-        print(f"  Learning Rate: {learning_rate}")
-        print(f"  Embedding Dim: {embedding_dim}")
-        print(f"  Hidden Dim: {hidden_dim}")
-        print(f"  Dropout Rate: {dropout_rate}")
-        
-        # Set seed for reproducibility
-        set_seed(seed)
-        
-        # Create discriminator
-        discriminator = create_discriminator(
-            disc_type=disc_type,
-            vocab_size=config.VOCAB_SIZE,
-            embedding_dim=embedding_dim,
-            hidden_dim=hidden_dim,
-            dropout=dropout_rate,
-            device=device
-        )
-        
-        # Create optimizer
-        optimizer = torch.optim.Adam(discriminator.parameters(), lr=learning_rate)
-        
-        # Create log file
-        log_file = os.path.join(base_output_dir, f'{i+1}_{disc_type}_bs{batch_size}_lr{learning_rate}_emb{embedding_dim}_hid{hidden_dim}_drop{dropout_rate}.log')
-        
-        # Train discriminator
-        pretrain_discriminator(
-            target_lstm=target_lstm,
-            generator=generator,
-            discriminator=discriminator,
-            optimizer=optimizer,
-            outer_epochs=outer_epochs,
-            inner_epochs=inner_epochs,
-            batch_size=batch_size,
-            generated_num=config.GENERATED_NUM,
-            log_file=log_file,
-            device=device
-        )
-
-    print(f"\nAll experiments completed. Results saved to: {base_output_dir}")
+    # Create log file
+    log_file = base_dir / f"discriminator_training.log"
+    
+    # Store metrics for tracking progress
+    metrics = {
+        'loss': [],
+        'accuracy': [],
+        'real_prob': [],
+        'fake_prob': []
+    }
+    
+    # Initial evaluation
+    initial_metrics = evaluate_discriminator(
+        discriminator, 
+        target_lstm, 
+        generator, 
+        num_samples=1000, 
+        device=device
+    )
+    
+    print(f"Initial metrics:")
+    print(f"  Accuracy: {initial_metrics['accuracy']:.4f}")
+    print(f"  Real Probability: {initial_metrics['real_prob']:.4f}")
+    print(f"  Fake Probability: {initial_metrics['fake_prob']:.4f}")
+    
+    # Store initial metrics
+    for key in metrics:
+        if key in initial_metrics:
+            metrics[key].append(initial_metrics[key])
+    
+    # Train discriminator
+    pretrain_discriminator(
+        target_lstm=target_lstm,
+        generator=generator,
+        discriminator=discriminator,
+        optimizer=optimizer,
+        outer_epochs=outer_epochs,
+        inner_epochs=inner_epochs,
+        batch_size=batch_size,
+        generated_num=config.GENERATED_NUM,
+        log_file=log_file,
+        device=device,
+        metrics=metrics  # Pass metrics dictionary to store values
+    )
+    
+    # Final evaluation
+    final_metrics = evaluate_discriminator(
+        discriminator, 
+        target_lstm, 
+        generator, 
+        num_samples=2000, 
+        device=device
+    )
+    
+    print(f"\nFinal evaluation:")
+    print(f"  Accuracy: {final_metrics['accuracy']:.4f}")
+    print(f"  Real Probability: {final_metrics['real_prob']:.4f}")
+    print(f"  Fake Probability: {final_metrics['fake_prob']:.4f}")
+    
+    # Store results
+    results = {
+        'config': params,
+        'seed': seed,
+        'final_metrics': final_metrics,
+        'metrics': metrics
+    }
+    
+    # Save results
+    results_path = base_dir / "discriminator_results.pkl"
+    with open(results_path, 'wb') as f:
+        pickle.dump(results, f)
+    
+    # Also save as JSON for easier inspection
+    with open(base_dir / "discriminator_results.json", 'w') as f:
+        # Convert numpy values to Python types
+        json_results = {
+            'config': params,
+            'seed': seed,
+            'final_metrics': {k: float(v) for k, v in final_metrics.items()},
+            'metrics': {k: [float(val) for val in v] for k, v in metrics.items()}
+        }
+        json.dump(json_results, f, indent=2)
+    
+    # Save the trained discriminator
+    torch.save(discriminator.state_dict(), base_dir / f"discriminator_{disc_type}.pth")
+    
+    print(f"Training completed! Results saved to {results_path}")
 
 if __name__ == "__main__":
     main()
