@@ -15,23 +15,19 @@ def get_config_hash(config):
 
 def get_free_gpu():
     try:
-        # Ensure CUDA is available
+        # Check if CUDA is available
         if not torch.cuda.is_available():
             return None
         
-        # Get total number of GPUs
         num_gpus = torch.cuda.device_count()
         
         for i in range(num_gpus):
-            # Get memory usage
+            # Get memory info
             total_memory = torch.cuda.get_device_properties(i).total_memory
             allocated_memory = torch.cuda.memory_allocated(i)
             
-            # Check GPU utilization
-            gpu_util = torch.cuda.utilization(i)
-            
-            # Criteria for a "free" GPU
-            if allocated_memory / total_memory < 0.1 and gpu_util < 5:
+            # Check if GPU is mostly free (less than 10% used)
+            if allocated_memory / total_memory < 0.1:
                 return i
         
         return None
