@@ -27,23 +27,30 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 
 WORKDIR ${WORKING_DIR}
 
-RUN mkdir -p ${WORKING_DIR}/outputs ${WORKING_DIR}/logs ${WORKING_DIR}/saved_models && \
+# Create necessary directories and set permissions
+RUN mkdir -p ${WORKING_DIR}/outputs ${WORKING_DIR}/logs ${WORKING_DIR}/saved_models/disc_outputs && \
     chmod -R 775 ${WORKING_DIR}
 
+# Copy requirements first for better layer caching
 COPY requirements.txt ${WORKING_DIR}/
 RUN pip3 install --no-cache-dir -r requirements.txt
 
+# Create user for better security
 RUN useradd -u 3754 -g 100 -m myuser && \
     chown -R myuser:users ${WORKING_DIR}
 
 USER myuser
 
 # Copy the SeqGAN files
-COPY --chown=myuser:users config.py discriminator.py generator.py oracle.py rollout.py pretrain.py test_discriminator.py ${WORKING_DIR}/
+COPY --chown=myuser:users config.py discriminator.py generator.py oracle.py rollout.py pretrain.py test_discriminator.py discriminator_parallel.py ${WORKING_DIR}/
 
+# Copy the target_params.pkl to the saved_models directory
+COPY --chown=myuser:users target_params.pkl ${WORKING_DIR}/saved_models/
+
+# Set environment variables
 ENV PYTHONPATH="${WORKING_DIR}"
 ENV PYTHONUNBUFFERED=1
 ENV NVIDIA_VISIBLE_DEVICES=all
 
-# Default command - replace with your preferred entry point
-CMD ["python3", "test_discriminator.py"]
+# Default command set to run the parallel discriminator testing
+CMD ["python3", "discriminator_parallel.py"]

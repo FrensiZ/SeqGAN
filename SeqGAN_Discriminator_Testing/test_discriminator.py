@@ -135,7 +135,7 @@ def main():
         hidden_dim=hidden_dim,
         dropout=dropout_rate,
         device=device
-    ).to(device)
+    )
     
     # Create optimizer
     optimizer = torch.optim.Adam(discriminator.parameters(), lr=learning_rate)
