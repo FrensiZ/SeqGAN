@@ -336,17 +336,11 @@ def evaluate_discriminator(discriminator, target_lstm, generator, num_samples, d
     
     return metrics
 
-def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, device):
-    
-    #print('Start pre-training discriminator...')
-    
+def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, device, metrics=None):
+        
     # Open log file
     log = open(log_file, 'w')
     log.write('Discriminator pre-training...\n')
-    
-    # Initial evaluation
-    #metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000, device=device)
-    #print(f"Initial accuracy: {metrics['accuracy']:.4f}")
     
     total_epochs = 0
     
@@ -392,10 +386,13 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             #print(log_str)
             log.write(log_str + '\n')
             log.flush()
+            
+            # Store metrics if dictionary is provided
+            if metrics is not None:
+                metrics['loss'].append(avg_loss)
+                metrics['accuracy'].append(eval_metrics['accuracy'])
+                metrics['real_prob'].append(eval_metrics['real_prob'])
+                metrics['fake_prob'].append(eval_metrics['fake_prob'])
     
     log.close()
-    
-    #torch.save(discriminator.state_dict(), 'discriminator_pretrained.pth')
-    
-    #print('Discriminator pretraining finished!')
 
