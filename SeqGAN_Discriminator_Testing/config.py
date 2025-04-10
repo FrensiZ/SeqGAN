@@ -11,7 +11,7 @@ os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Device configuration - will be overridden by CUDA_VISIBLE_DEVICES in parallel script
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE = torch.device(os.getenv('CUDA_DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu'))
 
 # Data parameters
 VOCAB_SIZE = 5000

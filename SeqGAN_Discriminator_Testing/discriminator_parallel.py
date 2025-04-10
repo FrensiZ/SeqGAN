@@ -6,6 +6,7 @@ import json
 import itertools
 import time
 import hashlib
+import torch
 
 N_SEEDS = 3  # Number of random seeds to test each configuration
 
@@ -14,17 +15,26 @@ def get_config_hash(config):
 
 def get_free_gpu():
     try:
-        result = subprocess.run(['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
-                              capture_output=True, text=True, timeout=5)
-        if result.returncode != 0:
+        # Ensure CUDA is available
+        if not torch.cuda.is_available():
             return None
         
-        free_gpus = []
-        for i, line in enumerate(result.stdout.strip().split('\n')):
-            used, free, util = map(int, line.split(','))
-            if used < 100 and util < 5:
-                free_gpus.append(i)
-        return free_gpus[0] if free_gpus else None
+        # Get total number of GPUs
+        num_gpus = torch.cuda.device_count()
+        
+        for i in range(num_gpus):
+            # Get memory usage
+            total_memory = torch.cuda.get_device_properties(i).total_memory
+            allocated_memory = torch.cuda.memory_allocated(i)
+            
+            # Check GPU utilization
+            gpu_util = torch.cuda.utilization(i)
+            
+            # Criteria for a "free" GPU
+            if allocated_memory / total_memory < 0.1 and gpu_util < 5:
+                return i
+        
+        return None
     except Exception as e:
         print(f"Error checking GPU status: {e}")
         return None
@@ -47,6 +57,7 @@ def generate_configs():
     return [dict(zip(keys, v)) for v in itertools.product(*values)]
 
 def run_training(config, gpu_id, seed, config_id):
+
     base_dir = Path(os.getenv('WORKING_DIR', '.'))
     output_dir = base_dir / f"disc_outputs/config_{config_id}/seed_{seed}"
     os.makedirs(output_dir, exist_ok=True)
@@ -58,7 +69,8 @@ def run_training(config, gpu_id, seed, config_id):
     
     env = os.environ.copy()
     env.update({
-        "CUDA_VISIBLE_DEVICES": str(gpu_id),
+        "CUDA_VISIBLE_DEVICES": str(gpu_id),  # Keep this
+        "CUDA_DEVICE": str(gpu_id),  # Add this line
         "GEN_PATH": str(base_dir / "saved_models/generator_pretrained.pth"),
         "OUTPUT_DIR": str(output_dir),
         "CONFIG_PATH": str(output_dir / "config.json"),

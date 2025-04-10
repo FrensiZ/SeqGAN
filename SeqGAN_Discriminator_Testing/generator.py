@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Generator(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device=None):
         
         super(Generator, self).__init__()
         
@@ -15,6 +15,11 @@ class Generator(nn.Module):
         self.hidden_dim = hidden_dim
         self.sequence_length = sequence_length
         self.start_token = start_token
+
+        # Use environment variable or default to None
+        if device is None:
+            device = torch.device(os.getenv('CUDA_DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu'))
+            
         self.device = device
         
         # Define layers

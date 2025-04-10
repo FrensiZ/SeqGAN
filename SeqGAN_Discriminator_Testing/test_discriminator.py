@@ -56,6 +56,8 @@ def create_discriminator(disc_type, vocab_size, embedding_dim, hidden_dim, dropo
         raise ValueError(f"Unknown discriminator type: {disc_type}")
 
 def main():
+
+    
     # Get working directory
     base_dir = Path(os.getenv('OUTPUT_DIR', '.'))
     os.makedirs(base_dir, exist_ok=True)

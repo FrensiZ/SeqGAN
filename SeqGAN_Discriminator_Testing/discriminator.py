@@ -6,13 +6,18 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Discriminator_Simple(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, num_layers=2, device='cpu'):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, num_layers=2, device=None):
         super(Discriminator_Simple, self).__init__()
         
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
+
+        # Use environment variable or default to None
+        if device is None:
+            device = torch.device(os.getenv('CUDA_DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu'))
+    
         self.device = device
         
         # Embedding layer
@@ -305,11 +310,15 @@ class Discriminator(nn.Module):
         
         return loss.item()
 
-def evaluate_discriminator(discriminator, target_lstm, generator, num_samples, device):
+def evaluate_discriminator(discriminator, target_lstm, generator, num_samples, device=None):
     
     discriminator.eval()
     target_lstm.eval()
     generator.eval()
+    
+    # Use environment variable or default to None
+    if device is None:
+        device = torch.device(os.getenv('CUDA_DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu'))
     
     with torch.no_grad():
         # Generate data
@@ -336,7 +345,11 @@ def evaluate_discriminator(discriminator, target_lstm, generator, num_samples, d
     
     return metrics
 
-def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, device):
+def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, device=None):
+
+    # Use environment variable or default to None
+    if device is None:
+        device = torch.device(os.getenv('CUDA_DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu'))
         
     # Open log file
     log = open(log_file, 'w')
