@@ -1,12 +1,13 @@
+import os
 import numpy as np
-import torch
+import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
 class Generator(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device=None):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device):
         
         super(Generator, self).__init__()
         
@@ -15,10 +16,6 @@ class Generator(nn.Module):
         self.hidden_dim = hidden_dim
         self.sequence_length = sequence_length
         self.start_token = start_token
-
-        # Use environment variable or default to None
-        if device is None:
-            device = torch.device(os.getenv('CUDA_DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu'))
             
         self.device = device
         
@@ -28,7 +25,7 @@ class Generator(nn.Module):
         self.output_layer = nn.Linear(hidden_dim, vocab_size)
                 
         # Initialize on device
-        self.to(device)
+        self.to(self.device)
        
     def forward(self, x, hidden=None):
 
@@ -40,13 +37,13 @@ class Generator(nn.Module):
     
     def generate(self, num_samples):
 
-        with torch.no_grad():
+        with th.no_grad():
             
             # Start token for all sequences
-            x = torch.full((num_samples, 1), self.start_token, dtype=torch.long, device=self.device)
-            hidden = None  # Let PyTorch initialize the hidden state
+            x = th.full((num_samples, 1), self.start_token, dtype=th.long, device=self.device)
+            hidden = None  # Let Pyth initialize the hidden state
 
-            generated_sequences = torch.zeros(num_samples, self.sequence_length, dtype=torch.long, device=self.device)
+            generated_sequences = th.zeros(num_samples, self.sequence_length, dtype=th.long, device=self.device)
 
             for i in range(self.sequence_length):
                 # Forward pass
@@ -56,7 +53,7 @@ class Generator(nn.Module):
                 
                 # Sample from distribution
                 probs = F.softmax(logits.squeeze(1), dim=-1)
-                next_token = torch.multinomial(probs, 1)
+                next_token = th.multinomial(probs, 1)
                 
                 # Add to sequence
                 generated_sequences[:, i] = next_token.squeeze()
@@ -93,15 +90,14 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
     # For learning rate scheduling
     best_loss = float('inf')
     patience_counter = 0
-        
-    
+
     # Generate Oracle Data
     target_lstm.eval()
     oracle_data = target_lstm.generate(generated_num)
     
     # Create DataLoader
-    oracle_dataset = torch.utils.data.TensorDataset(oracle_data)
-    oracle_loader = torch.utils.data.DataLoader(oracle_dataset, batch_size=batch_size,shuffle=True)
+    oracle_dataset = th.utils.data.TensorDataset(oracle_data)
+    oracle_loader = th.utils.data.DataLoader(oracle_dataset, batch_size=batch_size, shuffle=True)
     
     # Training loop
     for epoch in range(pre_epoch_num):
@@ -125,7 +121,7 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
         
         # Train on all batches
         for batch_data in oracle_loader:
-            x = batch_data[0]
+            x = batch_data[0].to(generator.device)
             loss = generator.pretrain_step(x, optimizer)
             epoch_loss += loss
             batch_count += 1
@@ -150,7 +146,7 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
 
     log.close()
     
-    #torch.save(generator.state_dict(), 'generator_pretrained.pth')
+    #th.save(generator.state_dict(), 'generator_pretrained.pth')
     
     print('Pretraining finished!')
     
@@ -162,7 +158,6 @@ def generator_adversarial_update(generator, sequences, rewards, optimizer):
     targets = sequences[:, 1:]  # all but the first token
     logits, _ = generator(inputs)
     
-
     log_probs = F.log_softmax(logits, dim=-1)
     
     # Create a one-hot representation of the targets
@@ -170,14 +165,14 @@ def generator_adversarial_update(generator, sequences, rewards, optimizer):
     
     # Calculate the log probability of the selected actions
     # This gives us a tensor of shape [batch_size, seq_length-1, vocab_size]
-    selected_log_probs = torch.sum(log_probs * one_hot_targets, dim=-1)
+    selected_log_probs = th.sum(log_probs * one_hot_targets, dim=-1)
     
     # Slice rewards to match (exclude reward for the start token)
     sequence_rewards = rewards[:, 1:]
     
     # Policy gradient loss: negative mean of (log_prob * reward)
     # We use negative because we're minimizing loss but want to maximize reward
-    loss = -torch.mean(selected_log_probs * sequence_rewards)
+    loss = -th.mean(selected_log_probs * sequence_rewards)
     
     # Backpropagate and update
     loss.backward()
