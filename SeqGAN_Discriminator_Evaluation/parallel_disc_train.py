@@ -26,12 +26,12 @@ PARALLEL_CONFIG = {
     'num_seeds': 3,                # Number of random seeds to test each configuration
     'param_grid': {
         'disc_type': ['simple', 'lstm', 'cnn'],
-        'batch_size': [64, 128], 
-        'learning_rate': [1e-4, 5e-4],
-        'embedding_dim': [64, 128],
-        'hidden_dim': [128, 256],
-        'dropout_rate': [0.1, 0.3],
-        'outer_epochs': [10, 25],
+        'batch_size': [64], 
+        'learning_rate': [1e-4],
+        'embedding_dim': [64],
+        'hidden_dim': [128],
+        'dropout_rate': [0.1],
+        'outer_epochs': [10],
         'inner_epochs': [2, 3]
     },
     'output_dir': RESULTS_DIR / "discriminator_search",
