@@ -227,11 +227,11 @@ class Discriminator_CNN(nn.Module):
         
         return loss.item()
 
-class Discriminator_other_LSTM(nn.Module):
+class Discriminator_LSTM_Surag(nn.Module):
 
     def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, device, num_layers=1):
         
-        super(Discriminator_other_LSTM, self).__init__()
+        super(Discriminator_LSTM_Surag, self).__init__()
         
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
