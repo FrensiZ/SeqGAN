@@ -1,6 +1,6 @@
 import os
 import numpy as np
-import torch
+import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
@@ -38,13 +38,13 @@ class Oracle(nn.Module):
     
     def generate(self, num_samples):
 
-        with torch.no_grad():
+        with th.no_grad():
             
             # Start token for all sequences
-            x = torch.full((num_samples, 1), self.start_token, dtype=torch.long, device=self.device)
-            hidden = None  # Let PyTorch initialize the hidden state
+            x = th.full((num_samples, 1), self.start_token, dtype=th.long, device=self.device)
+            hidden = None  # Let Pyth initialize the hidden state
 
-            generated_sequences = torch.zeros(num_samples, self.sequence_length, dtype=torch.long, device=self.device)
+            generated_sequences = th.zeros(num_samples, self.sequence_length, dtype=th.long, device=self.device)
 
             for i in range(self.sequence_length):
                 # Forward pass
@@ -54,7 +54,7 @@ class Oracle(nn.Module):
                 
                 # Sample from distribution
                 probs = F.softmax(logits.squeeze(1), dim=-1)
-                next_token = torch.multinomial(probs, 1)
+                next_token = th.multinomial(probs, 1)
                 
                 # Add to sequence
                 generated_sequences[:, i] = next_token.squeeze()
@@ -66,7 +66,7 @@ class Oracle(nn.Module):
 
     def calculate_nll(self, generated_sequences):
 
-        with torch.no_grad():
+        with th.no_grad():
             # Use all tokens except the last one as input
             inputs = generated_sequences[:, :-1]
             
@@ -96,9 +96,9 @@ class Oracle(nn.Module):
             print(f"Error loading pickle file: {str(e)}")
             return self
         
-        with torch.no_grad():
+        with th.no_grad():
             # 1. Embeddings
-            self.embeddings.weight.copy_(torch.tensor(params[0], dtype=torch.float32))
+            self.embeddings.weight.copy_(th.tensor(params[0], dtype=th.float32))
             
             # 2. LSTM Parameters
             # Extract individual LSTM weights
@@ -107,7 +107,7 @@ class Oracle(nn.Module):
             Wo, Uo, bo = params[7], params[8], params[9]  # Output gate
             Wc, Uc, bc = params[10], params[11], params[12]  # Cell state
             
-            # Concatenate the weights in PyTorch's expected format
+            # Concatenate the weights in Pyth's expected format
             weight_ih = np.vstack([Wi, Wf, Wc, Wo])
             weight_hh = np.vstack([Ui, Uf, Uc, Uo])
             
@@ -115,20 +115,20 @@ class Oracle(nn.Module):
             bias_ih = np.concatenate([bi, bf, bc, bo])
             bias_hh = np.zeros_like(bias_ih)
             
-            # Copy to PyTorch model
-            self.lstm.weight_ih_l0.copy_(torch.tensor(weight_ih, dtype=torch.float32))
-            self.lstm.weight_hh_l0.copy_(torch.tensor(weight_hh, dtype=torch.float32))
-            self.lstm.bias_ih_l0.copy_(torch.tensor(bias_ih, dtype=torch.float32))
-            self.lstm.bias_hh_l0.copy_(torch.tensor(bias_hh, dtype=torch.float32))
+            # Copy to Pyth model
+            self.lstm.weight_ih_l0.copy_(th.tensor(weight_ih, dtype=th.float32))
+            self.lstm.weight_hh_l0.copy_(th.tensor(weight_hh, dtype=th.float32))
+            self.lstm.bias_ih_l0.copy_(th.tensor(bias_ih, dtype=th.float32))
+            self.lstm.bias_hh_l0.copy_(th.tensor(bias_hh, dtype=th.float32))
             
             # 3. Output layer
-            self.output_layer.weight.copy_(torch.tensor(params[13].T, dtype=torch.float32))
-            self.output_layer.bias.copy_(torch.tensor(params[14], dtype=torch.float32))
+            self.output_layer.weight.copy_(th.tensor(params[13].T, dtype=th.float32))
+            self.output_layer.bias.copy_(th.tensor(params[14], dtype=th.float32))
         
         return self
 
     def save_params(self, path):
-        torch.save(self.state_dict(), path)
+        th.save(self.state_dict(), path)
         
     def save_samples(self, samples, file_path):
         with open(file_path, 'w') as f:
