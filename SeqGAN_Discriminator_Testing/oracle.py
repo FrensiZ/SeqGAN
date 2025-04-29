@@ -6,21 +6,18 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 import pickle
 
-class TargetLSTM(nn.Module):
+class Oracle(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device=None):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device):
         
-        super(TargetLSTM, self).__init__()
+        super(Oracle, self).__init__()
         
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.sequence_length = sequence_length
         self.start_token = start_token
-        # Use environment variable or default to None
-
-        if device is None:
-            device = torch.device(os.getenv('CUDA_DEVICE', 'cuda' if torch.cuda.is_available() else 'cpu'))
+        
         self.device = device
         
         # Define layers
@@ -29,7 +26,7 @@ class TargetLSTM(nn.Module):
         self.output_layer = nn.Linear(hidden_dim, vocab_size)
         
         # Initialize on device
-        self.to(device)
+        self.to(self.device)
        
     def forward(self, x, hidden=None):
 
