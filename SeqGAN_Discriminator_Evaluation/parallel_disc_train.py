@@ -1,5 +1,5 @@
 import os
-import torch
+import torch as th
 import subprocess
 from pathlib import Path
 import json
@@ -266,7 +266,7 @@ def main():
     # Continue until all runs complete
     while len(completed_runs) < len(configs) * PARALLEL_CONFIG['num_seeds']:
         # Check for available GPUs
-        if len(active_processes) < torch.cuda.device_count():
+        if len(active_processes) < th.cuda.device_count():
             gpu_id = get_free_gpu()
             
             if gpu_id is not None:

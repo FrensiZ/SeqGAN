@@ -3,7 +3,7 @@ import time
 import json
 import random
 import numpy as np
-import torch
+import torch as th
 from pathlib import Path
 import sys
 
@@ -48,12 +48,12 @@ def set_seed(seed):
     """Set random seed for reproducibility."""
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
+    th.manual_seed(seed)
+    if th.cuda.is_available():
+        th.cuda.manual_seed(seed)
+        th.cuda.manual_seed_all(seed)
+        th.backends.cudnn.deterministic = True
+        th.backends.cudnn.benchmark = False
 
 def create_discriminator(disc_type, vocab_size, embedding_dim, hidden_dim, dropout, device):
 
@@ -108,12 +108,12 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     
     # Set device
-    if torch.cuda.is_available():
+    if th.cuda.is_available():
         gpu_id = os.getenv('CUDA_VISIBLE_DEVICES', '0')
-        device = torch.device(f"cuda:{0}")  # Always use first visible device
+        device = th.device("cuda:0")
         print(f"Using GPU: {gpu_id}")
     else:
-        device = torch.device("cpu")
+        device = th.device("cpu")
         print("Using CPU")
     
     # Start timing
@@ -161,7 +161,7 @@ def main():
     
     # Load pretrained generator
     print(f"Loading pretrained generator from {GEN_PRETRAIN_PATH}...")
-    generator.load_state_dict(torch.load(GEN_PRETRAIN_PATH, map_location=device))
+    generator.load_state_dict(th.load(GEN_PRETRAIN_PATH, map_location=device))
     
     # Create discriminator
     discriminator = create_discriminator(
@@ -174,7 +174,7 @@ def main():
     )
     
     # Create optimizer
-    optimizer = torch.optim.Adam(discriminator.parameters(), lr=config['learning_rate'])
+    optimizer = th.optim.Adam(discriminator.parameters(), lr=config['learning_rate'])
     
     # Train discriminator
     pretrain_discriminator(
@@ -202,7 +202,7 @@ def main():
     
     # Save discriminator model
     model_path = os.path.join(output_dir, "discriminator_model.pth")
-    torch.save(discriminator.state_dict(), model_path)
+    th.save(discriminator.state_dict(), model_path)
     
     # Record training time
     training_time = time.time() - start_time
