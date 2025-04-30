@@ -198,8 +198,7 @@ def main():
         inner_epochs=config['inner_epochs'],
         batch_size=config['batch_size'],
         generated_num=GENERATED_NUM,
-        log_file=log_file,
-        device=device
+        log_file=log_file
     )
     
     # Evaluate final model

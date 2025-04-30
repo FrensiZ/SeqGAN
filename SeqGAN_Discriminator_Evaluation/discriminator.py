@@ -359,7 +359,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             
             total_epochs += 1
             avg_loss = total_loss / num_batches if num_batches > 0 else 0
-            eval_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000, device=device)
+            eval_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000)
             
             log_str = f'epoch:\t{total_epochs}\tloss:\t{avg_loss:.4f}\t'
             log_str += f'accuracy:\t{eval_metrics["accuracy"]:.4f}\t'
