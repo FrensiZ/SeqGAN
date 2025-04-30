@@ -207,8 +207,7 @@ def main():
         discriminator=discriminator,
         target_lstm=oracle,
         generator=generator,
-        num_samples=1000,
-        device=device
+        num_samples=1000
     )
     
     # Save discriminator model
