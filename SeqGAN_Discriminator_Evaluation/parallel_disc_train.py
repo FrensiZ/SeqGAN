@@ -42,7 +42,8 @@ def get_config_hash(config):
     return hashlib.md5(json.dumps(config, sort_keys=True).encode()).hexdigest()[:8]
 
 def get_free_gpu():
-    """Find a free GPU to use."""
+    """Find a free GPU to use from the allowed GPUs."""
+    allowed_gpus = [4, 5, 6, 7]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
@@ -50,19 +51,21 @@ def get_free_gpu():
         )
         
         if result.returncode != 0:
-            return None
+            return allowed_gpus[0]  # Default to first allowed GPU if check fails
         
         free_gpus = []
         
         for i, line in enumerate(result.stdout.strip().split('\n')):
-            used, free, util = map(int, line.split(','))
-            if used < 100 and util < 5:  # Consider GPU free if low usage
-                free_gpus.append(i)
+            if i in allowed_gpus:  # Only check allowed GPUs
+                used, free, util = map(int, line.split(','))
+                if used < 100 and util < 5:  # Consider GPU free if low usage
+                    free_gpus.append(i)
                 
-        return free_gpus[0] if free_gpus else None
+        return free_gpus[0] if free_gpus else allowed_gpus[0]
     except Exception as e:
         print(f"Error checking GPU status: {e}")
-        return None
+        return allowed_gpus[0]  # Default to first allowed GPU
+
 
 def generate_configs(param_grid):
     """Generate all possible configurations from the parameter grid."""
@@ -102,7 +105,7 @@ def run_training(config, gpu_id, seed, output_dir):
     
     # Start training process
     process = subprocess.Popen(
-        ["python", str(BASE_DIR / "train_discriminator.py")],
+        ["python3", str(BASE_DIR / "disc_train.py")],
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
