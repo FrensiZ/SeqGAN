@@ -147,7 +147,13 @@ def main():
     
     # Load oracle parameters
     print(f"Loading oracle parameters from {TARGET_PARAMS_PATH}...")
-    oracle.load_params(TARGET_PARAMS_PATH)
+    try:
+        oracle.load_params(TARGET_PARAMS_PATH)
+        if not os.path.exists(TARGET_PARAMS_PATH):
+            raise FileNotFoundError(f"Oracle parameter file not found: {TARGET_PARAMS_PATH}")
+    except Exception as e:
+        print(f"Error loading oracle parameters: {e}")
+        sys.exit(1)  # Exit with error code
     
     # Create Generator
     generator = Generator(
@@ -161,7 +167,13 @@ def main():
     
     # Load pretrained generator
     print(f"Loading pretrained generator from {GEN_PRETRAIN_PATH}...")
-    generator.load_state_dict(th.load(GEN_PRETRAIN_PATH, map_location=device))
+    try:
+        if not os.path.exists(GEN_PRETRAIN_PATH):
+            raise FileNotFoundError(f"Generator model file not found: {GEN_PRETRAIN_PATH}")
+        generator.load_state_dict(th.load(GEN_PRETRAIN_PATH, map_location=device))
+    except Exception as e:
+        print(f"Error loading pretrained generator: {e}")
+        sys.exit(1)  # Exit with error code
     
     # Create discriminator
     discriminator = create_discriminator(
