@@ -12,18 +12,16 @@ import pickle
 # ============= BASE DIRECTORIES =============
 BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
 SAVE_DIR = BASE_DIR / "saved_models"
-LOG_DIR = BASE_DIR / "logs"
 RESULTS_DIR = BASE_DIR / "results"
 
 # Create directories if they don't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
-os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
 # ============= PARALLEL TRAINING PARAMETERS =============
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
-    'num_seeds': 3,                # Number of random seeds to test each configuration
+    'num_seeds': 1,                # Number of random seeds to test each configuration
     'param_grid': {
         'disc_type': ['simple', 'lstm', 'cnn'],
         'batch_size': [64], 
