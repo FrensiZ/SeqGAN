@@ -39,8 +39,8 @@ def get_config_hash(config):
     """Generate a unique hash for a configuration."""
     return hashlib.md5(json.dumps(config, sort_keys=True).encode()).hexdigest()[:8]
 
-def get_free_gpu():
-    """Find a free GPU to use from the allowed GPUs."""
+def get_free_gpus():
+    """Find all free GPUs to use from the allowed GPUs."""
     allowed_gpus = [4, 5, 6, 7]  # Only use these GPUs
     try:
         result = subprocess.run(
@@ -49,7 +49,7 @@ def get_free_gpu():
         )
         
         if result.returncode != 0:
-            return allowed_gpus[0]  # Default to first allowed GPU if check fails
+            return allowed_gpus  # Default to all allowed GPUs if check fails
         
         free_gpus = []
         
@@ -59,10 +59,10 @@ def get_free_gpu():
                 if used < 100 and util < 5:  # Consider GPU free if low usage
                     free_gpus.append(i)
                 
-        return free_gpus[0] if free_gpus else allowed_gpus[0]
+        return free_gpus if free_gpus else allowed_gpus
     except Exception as e:
         print(f"Error checking GPU status: {e}")
-        return allowed_gpus[0]  # Default to first allowed GPU
+        return allowed_gpus  # Default to all allowed GPUs
 
 
 def generate_configs(param_grid):
@@ -263,45 +263,49 @@ def main():
     # Track active processes
     active_processes = {}  # (config_id, seed): {'process': process, 'gpu': gpu_id, 'output_dir': output_dir}
     completed_runs = set()  # Set of (config_id, seed) that have completed
-    
-    # Continue until all runs complete
+
+
     while len(completed_runs) < len(configs) * PARALLEL_CONFIG['num_seeds']:
-        # Check for available GPUs
-        if len(active_processes) < th.cuda.device_count():
-            gpu_id = get_free_gpu()
-            
-            if gpu_id is not None:
-                # Find a configuration and seed to run
-                for config_id, config in enumerate(configs):
-                    for seed in range(PARALLEL_CONFIG['num_seeds']):
-                        run_key = (config_id, seed)
-                        
-                        if run_key not in completed_runs and run_key not in active_processes:
-                            # Create output directory for this run
-                            run_dir = output_dir / f"config_{config_id}_seed_{seed}"
-                            
-                            # Start the training process
-                            try:
-                                print(f"Starting config {config_id} (type: {config['disc_type']}), seed {seed} on GPU {gpu_id}")
-                                process = run_training(config, gpu_id, seed, run_dir)
-                                
-                                # Track the process
-                                active_processes[run_key] = {
-                                    'process': process,
-                                    'gpu': gpu_id,
-                                    'output_dir': run_dir,
-                                    'start_time': time.time()
-                                }
-                                
-                                # Only start one new process per loop
-                                break
-                            except Exception as e:
-                                print(f"Error starting run for config {config_id}, seed {seed}: {e}")
-                                continue
+        # Get all available GPUs
+        free_gpus = get_free_gpus()
+        
+        # Start a job on each free GPU if we have pending runs
+        for gpu_id in free_gpus:
+            # Skip if this GPU already has a process running
+            if any(info['gpu'] == gpu_id for info in active_processes.values()):
+                continue
+                
+            # Find a configuration and seed to run
+            found_job = False
+            for config_id, config in enumerate(configs):
+                for seed in range(PARALLEL_CONFIG['num_seeds']):
+                    run_key = (config_id, seed)
                     
-                    # Break outer loop if we started a process
-                    if len(active_processes) > 0 and (config_id, seed) in active_processes:
-                        break
+                    if run_key not in completed_runs and run_key not in active_processes:
+                        # Create output directory for this run
+                        run_dir = output_dir / f"config_{config_id}_seed_{seed}"
+                        
+                        # Start the training process
+                        try:
+                            print(f"Starting config {config_id} (type: {config['disc_type']}), seed {seed} on GPU {gpu_id}")
+                            process = run_training(config, gpu_id, seed, run_dir)
+                            
+                            # Track the process
+                            active_processes[run_key] = {
+                                'process': process,
+                                'gpu': gpu_id,
+                                'output_dir': run_dir,
+                                'start_time': time.time()
+                            }
+                            
+                            found_job = True
+                            break
+                        except Exception as e:
+                            print(f"Error starting run for config {config_id}, seed {seed}: {e}")
+                            continue
+                            
+                if found_job:
+                    break
         
         # Check active processes for completion
         for run_key in list(active_processes.keys()):
