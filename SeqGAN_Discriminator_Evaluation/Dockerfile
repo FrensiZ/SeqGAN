@@ -49,7 +49,7 @@ USER myuser
 COPY --chown=myuser:users discriminator.py generator.py oracle.py disc_train.py parallel_disc_train.py ${WORKING_DIR}/
 
 # Copy the target_params.pkl to the saved_models directory
-COPY --chown=myuser:users target_params.pkl ${WORKING_DIR}/saved_models/
+COPY --chown=myuser:users saved_models/ ${WORKING_DIR}/saved_models/
 
 # Set environment variables
 ENV PYTHONPATH="${WORKING_DIR}"
