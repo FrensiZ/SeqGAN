@@ -9,7 +9,7 @@ class Discriminator(nn.Module):
 
     def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, device, num_layers=2):
         
-        super(Discriminator_LSTM_Frensi, self).__init__()
+        super(Discriminator, self).__init__()
         
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim

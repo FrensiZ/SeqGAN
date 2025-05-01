@@ -10,10 +10,9 @@ from torch.utils.data import DataLoader, TensorDataset
 
 # Import models
 from oracle import Oracle
-from generator import Generator, generator_adversarial_update
-from discriminator import Discriminator_LSTM_Frensi, evaluate_discriminator, pretrain_discriminator
+from generator import Generator, generator_adversarial_update, pretrain_generator
+from discriminator import Discriminator, evaluate_discriminator, pretrain_discriminator
 from rollout import Rollout
-from generator import pretrain_generator
 
 # ============= BASE DIRECTORIES =============
 BASE_DIR = Path(os.getenv('WORKING_DIR', Path(os.path.dirname(os.path.abspath(__file__)))))
@@ -50,6 +49,115 @@ def set_seed(seed):
         th.cuda.manual_seed_all(seed)
         th.backends.cudnn.deterministic = True
         th.backends.cudnn.benchmark = False
+
+
+def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_optimizer, 
+                num_epochs, batch_size, generated_num, g_steps, d_steps, k_epochs, 
+                log_path, log_path_reward, device):
+    
+    # Open log file
+    log = open(log_path, 'w')
+    log.write('epoch\tnll\tpg_loss\td_loss\td_accuracy\treal_prob\tfake_prob\tavg_reward\n')
+    
+    # Optional: Create a separate reward log file if needed
+    reward_log = open(log_path_reward, 'w')
+    reward_log.write('epoch\tposition\treward\n')
+    
+    for epoch in range(num_epochs):
+        print(f"Epoch {epoch}")
+        
+        # GENERATOR TRAINING PHASE
+        pg_losses = []
+        avg_token_rewards = []
+        
+        for _ in range(g_steps):
+            # Generate sequences
+            generator.train()
+            sequences = generator.generate(batch_size)
+            
+            # Get rewards using rollout
+            rewards = rollout.get_reward(sequences)
+            
+            # Track per-token rewards
+            avg_position_rewards = rewards.mean(dim=0).cpu().numpy()  # Average across batch for each position
+            avg_token_rewards.append(avg_position_rewards.mean())  # Overall average reward
+
+            # Log per-position rewards for EVERY epoch
+            for pos, reward in enumerate(avg_position_rewards):
+                reward_log.write(f"{epoch}\t{pos}\t{reward:.6f}\n")
+            
+            # Update generator using policy gradient
+            pg_loss = generator_adversarial_update(generator, sequences, rewards, g_optimizer)
+            pg_losses.append(pg_loss)
+        
+        # Flush the reward log every epoch to ensure data is written
+        reward_log.flush()
+        
+        # Average PG loss for this epoch
+        avg_pg_loss = sum(pg_losses) / len(pg_losses) if pg_losses else 0
+        avg_reward = sum(avg_token_rewards) / len(avg_token_rewards) if avg_token_rewards else 0
+        
+        # Update rollout module with new generator parameters
+        rollout.update_params()
+        
+        # DISCRIMINATOR TRAINING PHASE
+        d_losses = []
+        
+        for _ in range(d_steps):
+            # Generate new data for discriminator training
+            target_lstm.eval()
+            generator.eval()
+            positive_examples = target_lstm.generate(generated_num)
+            negative_examples = generator.generate(generated_num)
+            
+            # Create data loaders
+            pos_loader = DataLoader(TensorDataset(positive_examples), batch_size=batch_size, shuffle=True)
+            neg_loader = DataLoader(TensorDataset(negative_examples), batch_size=batch_size, shuffle=True)
+            
+            # Train discriminator for k epochs
+            for _ in range(k_epochs):
+                
+                discriminator.train()
+                
+                batch_d_losses = []
+                for (pos_batch,), (neg_batch,) in zip(pos_loader, neg_loader):
+                    d_loss = discriminator.train_step(pos_batch, neg_batch, d_optimizer)
+                    batch_d_losses.append(d_loss)
+                
+                if batch_d_losses:
+                    d_losses.append(sum(batch_d_losses) / len(batch_d_losses))
+        
+        # Average discriminator loss
+        avg_d_loss = sum(d_losses) / len(d_losses) if d_losses else 0
+        
+        # EVALUATION PHASE
+        if epoch % 1 == 0 or epoch == num_epochs - 1:
+            
+            generator.eval()
+            
+            # Generate samples for evaluation
+            eval_samples = generator.generate(generated_num)
+            # Calculate NLL using oracle
+            nll = target_lstm.calculate_nll(eval_samples)
+            
+            # Evaluate discriminator performance
+            disc_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000)
+            d_accuracy = disc_metrics['accuracy']
+            real_prob = disc_metrics['real_prob']
+            fake_prob = disc_metrics['fake_prob']
+            
+            # Log all metrics
+            metrics_str = f"Epoch {epoch}, NLL: {nll:.4f}, PG Loss: {avg_pg_loss:.4f}, D Loss: {avg_d_loss:.4f}, "
+            metrics_str += f"D Acc: {d_accuracy:.4f}, Real Prob: {real_prob:.4f}, Fake Prob: {fake_prob:.4f}, Avg Reward: {avg_reward:.4f}"
+            print(metrics_str)
+            
+            # Write to log file
+            log.write(f"{epoch}\t{nll:.6f}\t{avg_pg_loss:.6f}\t{avg_d_loss:.6f}\t{d_accuracy:.6f}\t{real_prob:.6f}\t{fake_prob:.6f}\t{avg_reward:.6f}\n")
+            log.flush()
+    
+    log.close()
+    reward_log.close()
+    print("Training completed!")
 
 def main():
     """Main function to run a single generator training."""
@@ -136,7 +244,7 @@ def main():
     )
     
     # Create discriminator
-    discriminator = Discriminator_LSTM_Frensi(
+    discriminator = Discriminator(
         vocab_size=VOCAB_SIZE,
         embedding_dim=config.get('d_embedding_dim', 128),
         hidden_dim=config.get('d_hidden_dim', 256),
@@ -147,7 +255,11 @@ def main():
     # Initialize optimizers
     g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config.get('g_pretrain_lr', 1e-3))
     d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=config.get('d_pretrain_lr', 4e-4))
-    
+
+    # Adversarial training optimizers
+    g_optimizer = th.optim.Adam(generator.parameters(), lr=config['g_learning_rate'])
+    d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
+
     # Pretraining phase
     if config.get('do_pretrain', True):
 
@@ -197,9 +309,7 @@ def main():
             checkpoint = th.load(disc_load_path, map_location=device)
             discriminator.load_state_dict(checkpoint['model_state_dict'])
             d_optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            
-            #discriminator.load_state_dict(th.load(disc_load_path, map_location=device))
-            
+                        
         except Exception as e:
             print(f"Error loading pretrained models: {e}")
             sys.exit(1)
@@ -212,11 +322,7 @@ def main():
         update_rate=config.get('rollout_update_rate', 0.8),
         device=device
     )
-    
-    # Initialize optimizers for adversarial training (potentially with different learning rates)
-    g_optimizer = th.optim.Adam(generator.parameters(), lr=config['g_learning_rate'])
-    d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
-    
+
     # Start adversarial training
     print("Starting adversarial training...")
     

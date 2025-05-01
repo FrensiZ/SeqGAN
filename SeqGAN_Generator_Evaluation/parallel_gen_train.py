@@ -28,7 +28,7 @@ PARALLEL_CONFIG = {
         'g_learning_rate': [1e-4],
         'pretrain_epochs': [80],
         'd_learning_rate': [1e-4],
-        'adv_epochs': [5],
+        'adv_epochs': [10],
         'do_pretrain': [False],
         'g_steps': [1],
         'd_steps': [3],
@@ -63,7 +63,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [1,2,3,4]  # Only use these GPUs
+    allowed_gpus = [0,1,2,3]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
