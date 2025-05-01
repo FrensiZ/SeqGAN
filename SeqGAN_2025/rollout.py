@@ -1,9 +1,9 @@
-import torch
+import torch as th
 import torch.nn.functional as F
 
 class Rollout:
     
-    def __init__(self, generator, discriminator, rollout_num, update_rate, device='cpu'):
+    def __init__(self, generator, discriminator, rollout_num, update_rate, device):
 
         self.generator = generator
         self.discriminator = discriminator
@@ -19,7 +19,7 @@ class Rollout:
             generator.sequence_length,
             generator.start_token,
             device
-        ).to(device)
+        ).to(self.device)
         
         # Copy the parameters
         self._update_generator_copy(update_rate=1.0)  # Full copy on initialization
@@ -42,16 +42,16 @@ class Rollout:
     def get_reward(self, sequences):
 
         batch_size, seq_length = sequences.shape
-        rewards = torch.zeros(batch_size, seq_length, device=self.device)
+        rewards = th.zeros(batch_size, seq_length, device=self.device)
         
         # For the last token, use the discriminator directly
-        with torch.no_grad():
+        with th.no_grad():
             final_rewards = self.discriminator.get_reward(sequences)
             rewards[:, -1] = final_rewards
         
         # For each position, perform rollout
         for position in range(seq_length - 1):
-            position_rewards = torch.zeros(batch_size, device=self.device)
+            position_rewards = th.zeros(batch_size, device=self.device)
             
             # Run multiple rollouts
             for _ in range(self.rollout_num):
@@ -59,7 +59,7 @@ class Rollout:
                 completions = self._monte_carlo_search(sequences, fixed_length=position + 1)
                 
                 # Get discriminator rewards for the completions
-                with torch.no_grad():
+                with th.no_grad():
                     completion_rewards = self.discriminator.get_reward(completions)
                     position_rewards += completion_rewards
             
@@ -78,7 +78,7 @@ class Rollout:
         # Set generator_copy to evaluation mode
         self.generator_copy.eval()
         
-        with torch.no_grad():
+        with th.no_grad():
             # Start with the fixed part
             current_input = sequences[:, :fixed_length]
             
@@ -94,8 +94,8 @@ class Rollout:
                 _, h = self.generator_copy.lstm(emb, h)
             
             # Generate the remaining tokens one at a time
-            current_token = sequences[:, fixed_length-1:fixed_length] if fixed_length > 0 else torch.full(
-                (batch_size, 1), self.generator_copy.start_token, dtype=torch.long, device=self.device
+            current_token = sequences[:, fixed_length-1:fixed_length] if fixed_length > 0 else th.full(
+                (batch_size, 1), self.generator_copy.start_token, dtype=th.long, device=self.device
             )
             
             # Complete the sequence token by token
@@ -107,7 +107,7 @@ class Rollout:
                 
                 # Sample from the distribution
                 probs = F.softmax(logits.squeeze(1), dim=-1)
-                next_token = torch.multinomial(probs, 1)
+                next_token = th.multinomial(probs, 1)
                 
                 # Add to the completed sequence
                 completed_sequences[:, t] = next_token.squeeze()
