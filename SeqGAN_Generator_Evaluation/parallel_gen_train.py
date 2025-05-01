@@ -27,7 +27,7 @@ PARALLEL_CONFIG = {
         'batch_size': [64], 
         'g_learning_rate': [1e-5, 5e-5, 1e-4],
         'd_learning_rate': [5e-5, 1e-4, 5e-4],
-        'pretrain_epochs': [80]
+        'pretrain_epochs': [80],
         'adv_epochs': [100],
         'do_pretrain': [False],
         'g_steps': [1, 2],
