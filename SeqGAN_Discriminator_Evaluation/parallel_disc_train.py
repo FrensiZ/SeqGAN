@@ -41,7 +41,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [4, 5, 6, 7]  # Only use these GPUs
+    allowed_gpus = [0,1,2,3]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
