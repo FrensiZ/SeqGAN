@@ -25,11 +25,11 @@ PARALLEL_CONFIG = {
     'param_grid': {
         'disc_type': ['simple'],
         'batch_size': [64], 
-        'learning_rate': [3e-4],
+        'learning_rate': [4e-4],
         'embedding_dim': [128],
         'hidden_dim': [256],
         'dropout_rate': [0.02],
-        'outer_epochs': [80],
+        'outer_epochs': [200],
         'inner_epochs': [2]
     },
     'output_dir': RESULTS_DIR / "discriminator_search",
@@ -41,7 +41,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [2,3,4]  # Only use these GPUs
+    allowed_gpus = [1,2,3,4]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
