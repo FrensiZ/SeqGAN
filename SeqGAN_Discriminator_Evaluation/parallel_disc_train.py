@@ -29,8 +29,8 @@ PARALLEL_CONFIG = {
         'embedding_dim': [128],
         'hidden_dim': [256],
         'dropout_rate': [0.02],
-        'outer_epochs': [200],
-        'inner_epochs': [2]
+        'outer_epochs': [1500],
+        'inner_epochs': [1]
     },
     'output_dir': RESULTS_DIR / "discriminator_search",
 }
