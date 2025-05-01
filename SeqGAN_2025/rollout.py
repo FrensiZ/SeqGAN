@@ -25,18 +25,14 @@ class Rollout:
         self._update_generator_copy(update_rate=1.0)  # Full copy on initialization
         
     def _update_generator_copy(self, update_rate=None):
-
         if update_rate is None:
             update_rate = self.update_rate
             
         # Update the generator copy's parameters
         for target_param, source_param in zip(self.generator_copy.parameters(), self.generator.parameters()):
-            target_param.data.copy_(
-                update_rate * source_param.data + (1.0 - update_rate) * target_param.data
-            )
+            target_param.data.copy_(update_rate * source_param.data + (1.0 - update_rate) * target_param.data)
     
     def update_params(self):
-
         self._update_generator_copy()
         
     def get_reward(self, sequences):
