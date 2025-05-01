@@ -205,12 +205,18 @@ def main():
         discriminator=discriminator,
         target_lstm=oracle,
         generator=generator,
-        num_samples=5000
+        num_samples=4000
     )
     
-    # Save discriminator model
+    # Save discriminator model and optimizer
     model_path = os.path.join(output_dir, "discriminator_model.pth")
-    th.save(discriminator.state_dict(), model_path)
+    th.save({
+        'model_state_dict': discriminator.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict()
+    }, model_path)
+    
+    # model_path = os.path.join(output_dir, "discriminator_model.pth")
+    # th.save(discriminator.state_dict(), model_path)
     
     # Record training time
     training_time = time.time() - start_time
