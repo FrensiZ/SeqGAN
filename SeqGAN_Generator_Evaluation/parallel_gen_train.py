@@ -21,41 +21,24 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # ============= PARALLEL TRAINING PARAMETERS =============
 # Settings for hyperparameter search
 
+
 PARALLEL_CONFIG = {
-    'num_seeds': 3,                # Number of random seeds to test each configuration
+    'num_seeds': 3,
     'param_grid': {
         'batch_size': [64], 
-        'g_learning_rate': [1e-4],
-        'pretrain_epochs': [80],
-        'd_learning_rate': [1e-4],
-        'adv_epochs': [10],
+        'g_learning_rate': [1e-5, 5e-5, 1e-4],
+        'd_learning_rate': [5e-5, 1e-4, 5e-4],
+        'adv_epochs': [100],
         'do_pretrain': [False],
-        'g_steps': [1],
-        'd_steps': [3],
-        'k_epochs': [3],
-        'rollout_num': [8],
+        'g_steps': [1, 2],
+        'd_steps': [1, 3],
+        'k_epochs': [1, 3],
+        'rollout_num': [8, 16],
         'rollout_update_rate': [0.8]
     },
     'output_dir': RESULTS_DIR / "generator_search",
 }
 
-# PARALLEL_CONFIG = {
-#     'num_seeds': 3,                # Number of random seeds to test each configuration
-#     'param_grid': {
-#         'batch_size': [64, 128], 
-#         'g_learning_rate': [1e-4, 5e-4, 1e-3],
-#         'pretrain_epochs': [80, 120],
-#         'd_learning_rate': [1e-4],
-#         'adv_epochs': [200],
-#         'do_pretrain': [False],
-#         'g_steps': [1, 3],
-#         'd_steps': [3, 5],
-#         'k_epochs': [3],
-#         'rollout_num': [8, 16],
-#         'rollout_update_rate': [0.6, 0.8]
-#     },
-#     'output_dir': RESULTS_DIR / "generator_search",
-# }
 
 def get_config_hash(config):
     """Generate a unique hash for a configuration."""
