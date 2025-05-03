@@ -21,15 +21,15 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # ============= PARALLEL TRAINING PARAMETERS =============
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
-    'num_seeds': 12,                # Number of random seeds to test each configuration
+    'num_seeds': 6,                # Number of random seeds to test each configuration
     'param_grid': {
         'disc_type': ['simple'],
         'batch_size': [64], 
         'learning_rate': [5e-3],
-        'embedding_dim': [128],
-        'hidden_dim': [256],
+        'embedding_dim': [64, 128],
+        'hidden_dim': [64, 128, 256],
         'dropout_rate': [0.05],
-        'outer_epochs': [200],
+        'outer_epochs': [150],
         'inner_epochs': [2],
         'lr_patience':[10],
         'lr_decay':[0.5],
