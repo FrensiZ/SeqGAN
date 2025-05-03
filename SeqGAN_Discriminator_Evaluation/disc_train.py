@@ -132,6 +132,8 @@ def main():
     print(f"  Dropout Rate: {config['dropout_rate']}")
     print(f"  Outer Epochs: {config['outer_epochs']}")
     print(f"  Inner Epochs: {config['inner_epochs']}")
+    print(f"  LR Patience: {config.get('lr_patience', 5)}")
+    print(f"  LR Decay: {config.get('lr_decay', 0.5)}")
     
     # Create Oracle
     oracle = Oracle(
@@ -185,6 +187,20 @@ def main():
     
     # Create optimizer
     optimizer = th.optim.Adam(discriminator.parameters(), lr=config['learning_rate'])
+
+    pretrain_discriminator(
+        target_lstm=oracle,
+        generator=generator,
+        discriminator=discriminator,
+        optimizer=optimizer,
+        outer_epochs=config['outer_epochs'],
+        inner_epochs=config['inner_epochs'],
+        batch_size=config['batch_size'],
+        generated_num=GENERATED_NUM,
+        log_file=log_file,
+        lr_patience=config['lr_patience'],
+        lr_decay=config['lr_decay']
+    )
     
     # Train discriminator
     pretrain_discriminator(
