@@ -26,7 +26,7 @@ PARALLEL_CONFIG = {
     'num_seeds': 2,
     'param_grid': {
         
-        'g_embedding_dim': [32, 64],
+        'g_embedding_dim': [32],
         'g_hidden_dim': [64, 128],
 
         'g_pretrain_batch_size': [64, 256], 
@@ -44,8 +44,34 @@ PARALLEL_CONFIG = {
         'k_epochs': [1],
 
     },
-    'output_dir': RESULTS_DIR / "generator_search",
+    'output_dir': RESULTS_DIR / "generator_search_emb_32",
 }
+
+# PARALLEL_CONFIG = {
+    
+#     'num_seeds': 2,
+#     'param_grid': {
+        
+#         'g_embedding_dim': [64],
+#         'g_hidden_dim': [64, 128],
+
+#         'g_pretrain_batch_size': [64, 256], 
+#         'g_adv_batch_size': [64, 256], 
+
+#         'g_learning_rate': [5e-3, 7e-4, 1e-4],
+#         'd_learning_rate': [5e-5],
+
+#         'pretrain_epochs': [250],
+#         'adv_epochs': [150],
+#         'do_pretrain': [True],
+
+#         'g_steps': [1, 4, 7],
+#         'd_steps': [1, 2],
+#         'k_epochs': [1],
+
+#     },
+#     'output_dir': RESULTS_DIR / "generator_search_emb_64",
+# }
 
 
 
