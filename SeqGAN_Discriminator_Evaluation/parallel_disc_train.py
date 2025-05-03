@@ -21,7 +21,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # ============= PARALLEL TRAINING PARAMETERS =============
 # Settings for hyperparameter search
 PARALLEL_CONFIG = {
-    'num_seeds': 12,                # Number of random seeds to test each configuration
+    'num_seeds': 6,                # Number of random seeds to test each configuration
     'param_grid': {
         'disc_type': ['simple'],
         'batch_size': [64], 
@@ -29,13 +29,14 @@ PARALLEL_CONFIG = {
         'embedding_dim': [128],
         'hidden_dim': [256],
         'dropout_rate': [0.05],
-        'outer_epochs': [500],
+        'outer_epochs': [200],
         'inner_epochs': [2],
         'lr_patience':[10],
         'lr_decay':[0.5],
     },
     'output_dir': RESULTS_DIR / "discriminator_search",
 }
+
 def get_config_hash(config):
     """Generate a unique hash for a configuration."""
     return hashlib.md5(json.dumps(config, sort_keys=True).encode()).hexdigest()[:8]
