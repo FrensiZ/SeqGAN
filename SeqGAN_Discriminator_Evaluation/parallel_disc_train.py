@@ -36,7 +36,6 @@ PARALLEL_CONFIG = {
     },
     'output_dir': RESULTS_DIR / "discriminator_search",
 }
-
 def get_config_hash(config):
     """Generate a unique hash for a configuration."""
     return hashlib.md5(json.dumps(config, sort_keys=True).encode()).hexdigest()[:8]
