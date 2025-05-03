@@ -229,7 +229,7 @@ def main():
     print(f"Training generator with:")
     print(f"  Seed: {seed}")
     print(f"  Device: {device}")
-    print(f"  Batch Size: {config['batch_size']}")
+    print(f"  Batch Size: {config['g_adv_batch_size']}")
     print(f"  Generator Learning Rate: {config['g_learning_rate']}")
     print(f"  Discriminator Learning Rate: {config['d_learning_rate']}")
     print(f"  Pre-training Epochs: {config['pretrain_epochs']}")
@@ -258,8 +258,8 @@ def main():
     # Create Generator
     generator = Generator(
         vocab_size=VOCAB_SIZE,
-        embedding_dim=GENERATOR_EMB_DIM,
-        hidden_dim=GENERATOR_HIDDEN_DIM,
+        embedding_dim=config['g_embedding_dim'],
+        hidden_dim=config['g_hidden_dim'],
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,
         device=device
@@ -292,7 +292,7 @@ def main():
             generator=generator,
             optimizer=g_optimizer_pretrain,
             pre_epoch_num=config['pretrain_epochs'],
-            batch_size=config['batch_size'],
+            batch_size=config['g_pretrain_batch_size'],
             generated_num=GENERATED_NUM,
             eval_freq=G_EVAL_FREQ,
             lr_patience=G_LR_PATIENCE,
@@ -361,7 +361,7 @@ def main():
         g_optimizer=g_optimizer,
         d_optimizer=d_optimizer,
         num_epochs=config['adv_epochs'],
-        batch_size=config['batch_size'],
+        batch_size=config['g_adv_batch_size'],
         generated_num=GENERATED_NUM,
         g_steps=config['g_steps'],
         d_steps=config['d_steps'],
