@@ -33,6 +33,7 @@ PARALLEL_CONFIG = {
         'inner_epochs': [2],
         'lr_patience':[10],
         'lr_decay':[0.5],
+        'min_lr':[5e-5],
     },
     'output_dir': RESULTS_DIR / "discriminator_search",
 }

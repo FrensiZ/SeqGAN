@@ -206,7 +206,8 @@ def main():
         generated_num=GENERATED_NUM,
         log_file=log_file,
         lr_patience=config['lr_patience'],
-        lr_decay=config['lr_decay']
+        lr_decay=config['lr_decay'],
+        min_lr=config['min_lr']
     )
     
     # Evaluate final model

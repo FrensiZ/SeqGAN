@@ -89,7 +89,7 @@ class Discriminator_LSTM_Frensi(nn.Module):
         
         return loss.item()
 
-def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, lr_patience, lr_decay):
+def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, lr_patience, lr_decay, min_lr):
         
     # Open log file
     log = open(log_file, 'w')
@@ -161,14 +161,26 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             patience_counter += 1
             
         if patience_counter >= lr_patience:
-            # Reduce learning rate
+            # Reduce learning rate, but don't go below min_lr
             for param_group in optimizer.param_groups:
-                param_group['lr'] *= lr_decay
-            log.write(f"Learning rate reduced to {optimizer.param_groups[0]['lr']}\n")
+                current_lr = param_group['lr']
+                new_lr = max(current_lr * lr_decay, min_lr)
+                param_group['lr'] = new_lr
+            
+            # Log the learning rate change
+            current_lr = optimizer.param_groups[0]['lr']
+            log.write(f"Learning rate reduced to {current_lr}\n")
             log.flush()
-            patience_counter = 0
+            
+            # Only reset patience counter if we actually changed the learning rate
+            if current_lr > min_lr:
+                patience_counter = 0
+            else:
+                log.write("Minimum learning rate reached.\n")
+                log.flush()
     
     log.close()
+
 
 def evaluate_discriminator(discriminator, target_lstm, generator, num_samples):
     

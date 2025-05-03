@@ -34,6 +34,15 @@ GENERATED_NUM = 5000  # Number of samples to generate for testing
 ORACLE_EMB_DIM = 32
 ORACLE_HIDDEN_DIM = 32
 
+# GENERATOR
+GENERATOR_EMB_DIM = 64
+GENERATOR_HIDDEN_DIM = 128
+
+# DISCRIMINATOR
+DISCRIMINATOR_EMB_DIM = 128
+DISCRIMINATOR_HIDDEN_DIM = 256
+
+
 # Paths for models
 ORACLE_PARAMS_PATH = SAVE_DIR / 'target_params.pkl'
 GEN_PRETRAIN_PATH = SAVE_DIR / 'generator_pretrained.pth'
@@ -236,8 +245,8 @@ def main():
     # Create Generator
     generator = Generator(
         vocab_size=VOCAB_SIZE,
-        embedding_dim=config.get('g_embedding_dim', ORACLE_EMB_DIM),
-        hidden_dim=config.get('g_hidden_dim', ORACLE_HIDDEN_DIM),
+        embedding_dim=GENERATOR_EMB_DIM,
+        hidden_dim=GENERATOR_HIDDEN_DIM,
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,
         device=device

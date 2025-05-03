@@ -87,13 +87,15 @@ class Discriminator(nn.Module):
         
         return loss.item()
 
-def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file):
+def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, lr_patience, lr_decay, min_lr):
         
     # Open log file
     log = open(log_file, 'w')
     log.write('Discriminator pre-training...\n')
     
     total_epochs = 0
+    best_loss = float('inf')
+    patience_counter = 0
     
     # Outer loop
     for outer_epoch in range(outer_epochs):
@@ -112,6 +114,9 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
         pos_loader = DataLoader(TensorDataset(positive_samples), batch_size=batch_size, shuffle=True)
         neg_loader = DataLoader(TensorDataset(negative_samples), batch_size=batch_size, shuffle=True)
         
+        epoch_total_loss = 0
+        epoch_batches = 0
+        
         for inner_epoch in range(inner_epochs):
             
             # Set discriminator to training mode
@@ -129,6 +134,9 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
                 loss = discriminator.train_step(pos_batch, neg_batch, optimizer)
                 total_loss += loss
                 num_batches += 1
+                
+                epoch_total_loss += loss
+                epoch_batches += 1
             
             total_epochs += 1
             avg_loss = total_loss / num_batches if num_batches > 0 else 0
@@ -140,6 +148,34 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             
             log.write(log_str + '\n')
             log.flush()
+        
+        # Learning rate scheduling
+        avg_epoch_loss = epoch_total_loss / epoch_batches if epoch_batches > 0 else float('inf')
+        
+        if avg_epoch_loss < best_loss:
+            best_loss = avg_epoch_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            
+        if patience_counter >= lr_patience:
+            # Reduce learning rate, but don't go below min_lr
+            for param_group in optimizer.param_groups:
+                current_lr = param_group['lr']
+                new_lr = max(current_lr * lr_decay, min_lr)
+                param_group['lr'] = new_lr
+            
+            # Log the learning rate change
+            current_lr = optimizer.param_groups[0]['lr']
+            log.write(f"Learning rate reduced to {current_lr}\n")
+            log.flush()
+            
+            # Only reset patience counter if we actually changed the learning rate
+            if current_lr > min_lr:
+                patience_counter = 0
+            else:
+                log.write("Minimum learning rate reached.\n")
+                log.flush()
     
     log.close()
 
