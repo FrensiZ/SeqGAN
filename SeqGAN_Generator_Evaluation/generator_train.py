@@ -300,7 +300,6 @@ def main():
             log_path=gen_pretrain_log
         )
 
-
         print("Starting discriminator pretraining...")
     
         pretrain_discriminator(
