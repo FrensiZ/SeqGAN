@@ -54,7 +54,7 @@ COPY --chown=myuser:users saved_models/ ${WORKING_DIR}/saved_models/
 # Set environment variables
 ENV PYTHONPATH="${WORKING_DIR}"
 ENV PYTHONUNBUFFERED=1
-ENV NVIDIA_VISIBLE_DEVICES=1,2,3,4
+ENV NVIDIA_VISIBLE_DEVICES=2,3,4
 
 # Default command set to run the parallel discriminator testing
 CMD ["python3", "parallel_disc_train.py"]

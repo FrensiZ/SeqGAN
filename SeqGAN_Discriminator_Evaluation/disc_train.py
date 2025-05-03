@@ -194,6 +194,7 @@ def main():
     # Create optimizer
     optimizer = th.optim.Adam(discriminator.parameters(), lr=config['learning_rate'])
 
+    # Train discriminator
     pretrain_discriminator(
         target_lstm=oracle,
         generator=generator,
@@ -206,19 +207,6 @@ def main():
         log_file=log_file,
         lr_patience=config['lr_patience'],
         lr_decay=config['lr_decay']
-    )
-    
-    # Train discriminator
-    pretrain_discriminator(
-        target_lstm=oracle,
-        generator=generator,
-        discriminator=discriminator,
-        optimizer=optimizer,
-        outer_epochs=config['outer_epochs'],
-        inner_epochs=config['inner_epochs'],
-        batch_size=config['batch_size'],
-        generated_num=GENERATED_NUM,
-        log_file=log_file
     )
     
     # Evaluate final model
