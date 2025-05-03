@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Generator(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device, num_layers=2):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device, num_layers=1):
         
         super(Generator, self).__init__()
         
