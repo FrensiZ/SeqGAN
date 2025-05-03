@@ -33,16 +33,28 @@ GENERATED_NUM = 5000  # Number of samples to generate for testing
 # Oracle/Generator model parameters
 ORACLE_EMB_DIM = 32
 ORACLE_HIDDEN_DIM = 32
-LR_D_PRETRAIN = 5e-3
 
 # GENERATOR
-# GENERATOR_EMB_DIM = 32
-# GENERATOR_HIDDEN_DIM = 64
-LR_G_PRETRAIN = 5e-3
+G_EVAL_FREQ = 5
+G_LR_PATIENCE = 5
+G_LR_DECAY = 0.5
+G_PRETRAIN_LR = 5e-3
 
 # DISCRIMINATOR
 DISCRIMINATOR_EMB_DIM = 32
 DISCRIMINATOR_HIDDEN_DIM = 64
+D_DROPOUT_RATE = 0.05
+D_OUTER_EPOCH = 150
+D_INNTER_EPOCH = 2
+D_BATCH_SIZE = 64
+D_LR_PATIENCE = 10
+D_LR_DECAY = 0.5
+D_LR_MIN = 1e-5
+D_PRETRAIN_LR = 5e-3
+
+# ROLLOUT
+ROLLOUT_NUM = 16
+ROLLOUT_UPDATE_RATE = 0.8
 
 
 # Paths for models
@@ -221,7 +233,6 @@ def main():
     print(f"  Generator Learning Rate: {config['g_learning_rate']}")
     print(f"  Discriminator Learning Rate: {config['d_learning_rate']}")
     print(f"  Pre-training Epochs: {config['pretrain_epochs']}")
-    print(f"  Rollout Number: {config['rollout_num']}")
     print(f"  Total Adversarial Epochs: {config['adv_epochs']}")
     
     # Create Oracle
@@ -257,15 +268,15 @@ def main():
     # Create discriminator
     discriminator = Discriminator(
         vocab_size=VOCAB_SIZE,
-        embedding_dim=config.get('d_embedding_dim', 128),
-        hidden_dim=config.get('d_hidden_dim', 256),
-        dropout_rate=config.get('dropout_rate', 0.02),
+        embedding_dim=DISCRIMINATOR_EMB_DIM,
+        hidden_dim=DISCRIMINATOR_HIDDEN_DIM,
+        dropout_rate=D_DROPOUT_RATE,
         device=device
     )
     
     # Initialize optimizers
-    g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config.get('g_pretrain_lr', 1e-3))
-    d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=config.get('d_pretrain_lr', 4e-4))
+    g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=G_PRETRAIN_LR)
+    d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=D_PRETRAIN_LR)
 
     # Adversarial training optimizers
     g_optimizer = th.optim.Adam(generator.parameters(), lr=config['g_learning_rate'])
@@ -275,6 +286,7 @@ def main():
     if config.get('do_pretrain', True):
 
         print("Starting generator pretraining...")
+
         pretrain_generator(
             target_lstm=oracle,
             generator=generator,
@@ -282,25 +294,30 @@ def main():
             pre_epoch_num=config['pretrain_epochs'],
             batch_size=config['batch_size'],
             generated_num=GENERATED_NUM,
-            eval_freq=config.get('eval_freq', 5),
-            lr_patience=config.get('lr_patience', 5),
-            lr_decay=config.get('lr_decay', 0.5),
+            eval_freq=G_EVAL_FREQ,
+            lr_patience=G_LR_PATIENCE,
+            lr_decay=G_LR_DECAY,
             log_path=gen_pretrain_log
         )
-        
+
+
         print("Starting discriminator pretraining...")
+    
         pretrain_discriminator(
             target_lstm=oracle,
             generator=generator,
             discriminator=discriminator,
             optimizer=d_optimizer_pretrain,
-            outer_epochs=config.get('d_outer_epochs', 10),
-            inner_epochs=config.get('d_inner_epochs', 2),
-            batch_size=config['batch_size'],
+            outer_epochs=D_OUTER_EPOCH,
+            inner_epochs=D_INNTER_EPOCH,
+            batch_size=D_BATCH_SIZE,
             generated_num=GENERATED_NUM,
-            log_file=disc_pretrain_log
+            log_file=log_file,
+            lr_patience=D_LR_PATIENCE,
+            lr_decay=D_LR_DECAY,
+            min_lr=D_LR_MIN
         )
-        
+
         # Save pretrained models
         gen_save_path = os.path.join(output_dir, "generator_pretrained.pth")
         disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
@@ -329,8 +346,8 @@ def main():
     rollout = Rollout(
         generator=generator,
         discriminator=discriminator,
-        rollout_num=config['rollout_num'],
-        update_rate=config.get('rollout_update_rate', 0.8),
+        rollout_num=ROLLOUT_NUM,
+        update_rate=ROLLOUT_UPDATE_RATE,
         device=device
     )
 
@@ -347,9 +364,9 @@ def main():
         num_epochs=config['adv_epochs'],
         batch_size=config['batch_size'],
         generated_num=GENERATED_NUM,
-        g_steps=config.get('g_steps', 1),
-        d_steps=config.get('d_steps', 5),
-        k_epochs=config.get('k_epochs', 3),
+        g_steps=config['g_steps'],
+        d_steps=config['d_steps'],
+        k_epochs=config['k_epochs'],
         log_path=adversarial_log,
         log_path_reward=reward_log,
         device=device
