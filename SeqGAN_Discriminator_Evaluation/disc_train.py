@@ -27,6 +27,9 @@ RESULTS_DIR = BASE_DIR / "results"
 os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
+
+
+
 # ============= FIXED PARAMETERS =============
 # Data parameters
 VOCAB_SIZE = 5000
@@ -37,6 +40,9 @@ GENERATED_NUM = 5000  # Number of samples to generate for testing
 # Oracle/Generator model parameters
 ORACLE_EMB_DIM = 32
 ORACLE_HIDDEN_DIM = 32
+
+
+
 
 # Paths for models
 GEN_PRETRAIN_PATH = SAVE_DIR / 'generator_pretrained.pth'
