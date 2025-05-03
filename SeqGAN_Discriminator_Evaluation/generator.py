@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Generator(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device, num_layers=2):
         
         super(Generator, self).__init__()
         
@@ -16,12 +16,13 @@ class Generator(nn.Module):
         self.hidden_dim = hidden_dim
         self.sequence_length = sequence_length
         self.start_token = start_token
+        self.num_layers = num_layers
             
         self.device = device
         
         # Define layers
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=True)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers, batch_first=True)
         self.output_layer = nn.Linear(hidden_dim, vocab_size)
                 
         # Initialize on device
@@ -179,4 +180,3 @@ def generator_adversarial_update(generator, sequences, rewards, optimizer):
     optimizer.step()
     
     return loss.item()
-
