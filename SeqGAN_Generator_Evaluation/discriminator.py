@@ -64,15 +64,17 @@ class Discriminator(nn.Module):
         
         # Prepare inputs and targets
         batch_size = real_data.size(0)
-
         real_data = real_data.to(self.device)
         generated_data = generated_data.to(self.device)
-
         inputs = th.cat([real_data, generated_data], dim=0)
-        
+
+        # Instead of hard 0/1 targets, use 0.1/0.9
+        smooth_real = 0.9  # Instead of 1.0
+        smooth_fake = 0.1  # Instead of 0.0
+    
         targets = th.cat([
-            th.ones(batch_size, device=self.device), 
-            th.zeros(batch_size, device=self.device)
+            th.ones(batch_size, device=self.device) * smooth_real,  # Smoothed real targets 
+            th.zeros(batch_size, device=self.device) * smooth_fake  # Smoothed fake targets
         ], dim=0)
         
         # Forward pass
@@ -116,7 +118,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
         
         epoch_total_loss = 0
         epoch_batches = 0
-        
+
         for inner_epoch in range(inner_epochs):
             
             # Set discriminator to training mode
@@ -125,18 +127,56 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
             total_loss = 0
             num_batches = 0
             
+            # Keep track of accuracy to stop updates when needed
+            total_accuracy = 0
+            
             # Iterate through batches
             for (pos_batch,), (neg_batch,) in zip(pos_loader, neg_loader):
                 
                 pos_batch = pos_batch.to(discriminator.device)
                 neg_batch = neg_batch.to(discriminator.device)
 
-                loss = discriminator.train_step(pos_batch, neg_batch, optimizer)
-                total_loss += loss
+                # Get current accuracy before training
+                with th.no_grad():
+                    # Forward pass for accuracy check
+                    inputs = th.cat([pos_batch, neg_batch], dim=0)
+                    batch_size = pos_batch.size(0)
+                    targets = th.cat([
+                        th.ones(batch_size, device=discriminator.device),
+                        th.zeros(batch_size, device=discriminator.device)
+                    ], dim=0)
+                    
+                    logits = discriminator(inputs)
+                    preds = (th.sigmoid(logits) >= 0.5).float()
+                    batch_accuracy = (preds == targets).float().mean().item()
+                
+                # If accuracy is too high, don't update weights
+                if batch_accuracy < 0.95:  # Key change: only update when accuracy < 95%
+                    loss = discriminator.train_step(pos_batch, neg_batch, optimizer)
+                else:
+                    # Still calculate loss but don't update
+                    with th.no_grad():
+                        # Forward pass
+                        inputs = th.cat([pos_batch, neg_batch], dim=0)
+                        batch_size = pos_batch.size(0)
+                        # Use smoothed labels here too for consistency
+                        smooth_real = 0.9
+                        smooth_fake = 0.1
+                        targets = th.cat([
+                            th.ones(batch_size, device=discriminator.device) * smooth_real,
+                            th.zeros(batch_size, device=discriminator.device) * smooth_fake
+                        ], dim=0)
+                        
+                        logits = discriminator(inputs)
+                        loss = F.binary_cross_entropy_with_logits(logits, targets)
+                
+                total_loss += loss.item() if isinstance(loss, th.Tensor) else loss
+                total_accuracy += batch_accuracy
                 num_batches += 1
                 
-                epoch_total_loss += loss
+                epoch_total_loss += total_loss
                 epoch_batches += 1
+
             
             total_epochs += 1
             avg_loss = total_loss / num_batches if num_batches > 0 else 0
