@@ -23,7 +23,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds': 2,
+    'num_seeds': 3,
     'param_grid': {
         
         'g_embedding_dim': [64],
@@ -44,7 +44,7 @@ PARALLEL_CONFIG = {
         'k_epochs': [1],
 
     },
-    'output_dir': RESULTS_DIR / "generator_search_flair1",
+    'output_dir': RESULTS_DIR / "generator_search_flair2",
 }
 
 
