@@ -151,7 +151,7 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
                     batch_accuracy = (preds == targets).float().mean().item()
                 
                 # If accuracy is too high, don't update weights
-                if batch_accuracy < 0.95:  # Key change: only update when accuracy < 95%
+                if batch_accuracy < 0.85:  # Key change: only update when accuracy < 95%
                     loss = discriminator.train_step(pos_batch, neg_batch, optimizer)
                 else:
                     # Still calculate loss but don't update
