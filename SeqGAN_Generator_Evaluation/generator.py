@@ -80,7 +80,7 @@ class Generator(nn.Module):
         
         return loss.item()
 
-def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_size, generated_num, eval_freq, lr_patience, lr_decay, log_path):
+def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_size, generated_num, positive_samples, eval_freq, lr_patience, lr_decay, log_path):
     
     print('Start pre-training...')
 
@@ -93,8 +93,7 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
     patience_counter = 0
 
     # Generate Oracle Data
-    target_lstm.eval()
-    oracle_data = target_lstm.generate(generated_num)
+    oracle_data = positive_samples
     
     # Create DataLoader
     oracle_dataset = th.utils.data.TensorDataset(oracle_data)
@@ -146,8 +145,6 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
             patience_counter = 0
 
     log.close()
-    
-    #th.save(generator.state_dict(), 'generator_pretrained.pth')
     
     print('Pretraining finished!')
     

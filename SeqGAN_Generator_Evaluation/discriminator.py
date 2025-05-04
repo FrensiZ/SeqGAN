@@ -89,7 +89,7 @@ class Discriminator(nn.Module):
         
         return loss.item()
 
-def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, log_file, lr_patience, lr_decay, min_lr):
+def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, outer_epochs, inner_epochs, batch_size, generated_num, positive_samples, log_file, lr_patience, lr_decay, min_lr):
         
     # Open log file
     log = open(log_file, 'w')
@@ -98,22 +98,17 @@ def pretrain_discriminator(target_lstm, generator, discriminator, optimizer, out
     total_epochs = 0
     best_loss = float('inf')
     patience_counter = 0
+
     
     # Outer loop
     for outer_epoch in range(outer_epochs):
-
-        # Generate positive samples from the oracle (only once)
-        target_lstm.eval()
-        with th.no_grad():
-            positive_samples = target_lstm.generate(generated_num)
             
         # Generate new negative samples for each outer epoch
         generator.eval()
         with th.no_grad():
             negative_samples = generator.generate(generated_num)
-        
-        # Create data loaders for this outer epoch
-        pos_loader = DataLoader(TensorDataset(positive_samples), batch_size=batch_size, shuffle=True)
+
+        pos_loader = DataLoader(TensorDataset(positive_samples), batch_size=batch_size, shuffle=True)   
         neg_loader = DataLoader(TensorDataset(negative_samples), batch_size=batch_size, shuffle=True)
         
         epoch_total_loss = 0

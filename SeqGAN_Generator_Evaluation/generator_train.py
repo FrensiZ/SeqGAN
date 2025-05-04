@@ -28,7 +28,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 VOCAB_SIZE = 5000
 SEQ_LENGTH = 20
 START_TOKEN = 0
-GENERATED_NUM = 5000  # Number of samples to generate for testing
+GENERATED_NUM = 10000  # Number of samples to generate for testing
 
 # Oracle/Generator model parameters
 ORACLE_EMB_DIM = 32
@@ -44,7 +44,7 @@ G_PRETRAIN_LR = 5e-3
 DISCRIMINATOR_EMB_DIM = 64
 DISCRIMINATOR_HIDDEN_DIM = 128
 D_DROPOUT_RATE = 0.1
-D_OUTER_EPOCH = 25
+D_OUTER_EPOCH = 10
 D_INNTER_EPOCH = 2
 D_BATCH_SIZE = 128
 D_LR_PATIENCE = 10
@@ -55,7 +55,6 @@ D_PRETRAIN_LR = 5e-3
 # ROLLOUT
 ROLLOUT_NUM = 16
 ROLLOUT_UPDATE_RATE = 0.8
-
 
 # Paths for models
 ORACLE_PARAMS_PATH = SAVE_DIR / 'target_params.pkl'
@@ -75,7 +74,7 @@ def set_seed(seed):
 
 
 def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_optimizer, 
-                num_epochs, batch_size, generated_num, g_steps, d_steps, k_epochs, 
+                num_epochs, batch_size, generated_num, positive_samples, g_steps, d_steps, k_epochs, 
                 log_path, log_path_reward, device):
     
     # Open log file
@@ -128,13 +127,11 @@ def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_
         
         for _ in range(d_steps):
             # Generate new data for discriminator training
-            target_lstm.eval()
             generator.eval()
-            positive_examples = target_lstm.generate(generated_num)
             negative_examples = generator.generate(generated_num)
             
             # Create data loaders
-            pos_loader = DataLoader(TensorDataset(positive_examples), batch_size=batch_size, shuffle=True)
+            pos_loader = DataLoader(TensorDataset(positive_samples), batch_size=batch_size, shuffle=True)
             neg_loader = DataLoader(TensorDataset(negative_examples), batch_size=batch_size, shuffle=True)
             
             # Train discriminator for k epochs
@@ -282,6 +279,14 @@ def main():
     g_optimizer = th.optim.Adam(generator.parameters(), lr=config['g_learning_rate'])
     d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
 
+    # ===== CHANGE 1: Generate positive samples once here =====
+    print("Generating real data from oracle (target LSTM)...")
+    oracle.eval()
+    with th.no_grad():
+        positive_samples = oracle.generate(GENERATED_NUM)
+    print(f"Generated {GENERATED_NUM} positive samples.")
+    # =======================================================
+
     # Pretraining phase
     if config.get('do_pretrain', True):
 
@@ -294,6 +299,7 @@ def main():
             pre_epoch_num=config['pretrain_epochs'],
             batch_size=config['g_pretrain_batch_size'],
             generated_num=GENERATED_NUM,
+            positive_samples=positive_samples,
             eval_freq=G_EVAL_FREQ,
             lr_patience=G_LR_PATIENCE,
             lr_decay=G_LR_DECAY,
@@ -311,6 +317,7 @@ def main():
             inner_epochs=D_INNTER_EPOCH,
             batch_size=D_BATCH_SIZE,
             generated_num=GENERATED_NUM,
+            positive_samples=positive_samples,
             log_file=log_file,
             lr_patience=D_LR_PATIENCE,
             lr_decay=D_LR_DECAY,
@@ -363,6 +370,7 @@ def main():
         num_epochs=config['adv_epochs'],
         batch_size=config['g_adv_batch_size'],
         generated_num=GENERATED_NUM,
+        positive_samples=positive_samples,
         g_steps=config['g_steps'],
         d_steps=config['d_steps'],
         k_epochs=config['k_epochs'],
