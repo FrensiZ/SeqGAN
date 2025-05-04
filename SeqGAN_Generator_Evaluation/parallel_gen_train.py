@@ -44,7 +44,7 @@ PARALLEL_CONFIG = {
         'k_epochs':                 [1, 2],
 
     },
-    'output_dir': RESULTS_DIR / "generator_search_flair2",
+    'output_dir': RESULTS_DIR / "generator_search_flair12",
 }
 
 
@@ -54,7 +54,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [2,3,4,5,6,7]  # Only use these GPUs
+    allowed_gpus = [2,3,4,5]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
