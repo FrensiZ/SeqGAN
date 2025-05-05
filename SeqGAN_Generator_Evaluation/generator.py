@@ -108,7 +108,7 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
         # Evaluate using the oracle every eval_freq epochs
         if epoch % eval_freq == 0 or epoch == pre_epoch_num - 1:
 
-            generated_samples = generator.generate(int(generated_num/10))
+            generated_samples = generator.generate(int(generated_num/5))
             
             # Calculate NLL using the oracle
             nll = target_lstm.calculate_nll(generated_samples)
@@ -128,7 +128,6 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
         
         # Calculate average loss for this epoch
         avg_loss = epoch_loss / batch_count
-        #print(f'Epoch {epoch}, Average Loss: {avg_loss:.4f}')
 
         # Learning rate scheduling
         if avg_loss < best_loss:

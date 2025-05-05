@@ -156,12 +156,12 @@ def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_
             generator.eval()
             
             # Generate samples for evaluation
-            eval_samples = generator.generate(generated_num)
+            eval_samples = generator.generate(int(generated_num/5))
             # Calculate NLL using oracle
             nll = target_lstm.calculate_nll(eval_samples)
             
             # Evaluate discriminator performance
-            disc_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=1000)
+            disc_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=int(generated_num/5))
             d_accuracy = disc_metrics['accuracy']
             real_prob = disc_metrics['real_prob']
             fake_prob = disc_metrics['fake_prob']
