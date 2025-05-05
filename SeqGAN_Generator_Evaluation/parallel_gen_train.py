@@ -39,7 +39,7 @@ PARALLEL_CONFIG = {
         'adv_epochs':               [150],
         'do_pretrain':              [True],
 
-        'g_steps':                  [4],
+        'g_steps':                  [2, 4],
         'd_steps':                  [1, 2],
         'k_epochs':                 [1, 2],
 
