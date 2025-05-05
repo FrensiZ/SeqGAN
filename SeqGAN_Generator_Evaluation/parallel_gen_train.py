@@ -23,24 +23,24 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds':                    10,
+    'num_seeds':                    5,
     'param_grid': {
         
         'g_embedding_dim':          [64],
         'g_hidden_dim':             [128],
 
         'g_pretrain_batch_size':    [128], 
-        'g_adv_batch_size':         [128, 256], 
+        'g_adv_batch_size':         [128], 
 
-        'g_learning_rate':          [1e-3, 7e-4],
+        'g_learning_rate':          [8e-4],
         'd_learning_rate':          [5e-5, 1e-5],
 
-        'pretrain_epochs':          [150],
-        'adv_epochs':               [100],
+        'pretrain_epochs':          [200],
+        'adv_epochs':               [150],
         'do_pretrain':              [True],
 
-        'g_steps':                  [2, 3, 5],
-        'd_steps':                  [1],
+        'g_steps':                  [3, 5],
+        'd_steps':                  [1, 2],
         'k_epochs':                 [1, 2],
 
     },
