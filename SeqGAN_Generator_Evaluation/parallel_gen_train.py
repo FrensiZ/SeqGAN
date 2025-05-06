@@ -21,31 +21,82 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 # ============= PARALLEL TRAINING PARAMETERS =============
 # Settings for hyperparameter search
 
+
 PARALLEL_CONFIG = {
     
-    'num_seeds':                    20,
+    'num_seeds':                    4,
     'param_grid': {
         
-        'g_embedding_dim':          [64],
-        'g_hidden_dim':             [128],
+        'g_hidden_dim':             [256],
 
-        'g_pretrain_batch_size':    [128], 
-        'g_adv_batch_size':         [128], 
+        'g_pretrain_batch_size':    [64], 
+        'g_adv_batch_size':         [32, 64], 
 
-        'g_learning_rate':          [1e-3, 8e-4],
+        'g_learning_rate':          [1e-3, 1e-4, 1e-5],
         'd_learning_rate':          [3e-5],
 
-        'pretrain_epochs':          [200],
-        'adv_epochs':               [150],
+        'pretrain_epochs':          [150],
+        'adv_epochs':               [200],
         'do_pretrain':              [True],
 
-        'g_steps':                  [2, 4],
-        'd_steps':                  [1, 2],
-        'k_epochs':                 [1, 2],
+        'g_steps':                  [1, 3, 5],
+        'd_steps':                  [1, 3, 5],
+        'k_epochs':                 [1, 2, 3],
 
     },
     'output_dir': RESULTS_DIR / "generator_search_flair12",
 }
+
+# PARALLEL_CONFIG = {
+    
+#     'num_seeds':                    20,
+#     'param_grid': {
+        
+#         'g_hidden_dim':             [128],
+
+#         'g_pretrain_batch_size':    [128], 
+#         'g_adv_batch_size':         [128], 
+
+#         'g_learning_rate':          [1e-3, 8e-4],
+#         'd_learning_rate':          [3e-5],
+
+#         'pretrain_epochs':          [200],
+#         'adv_epochs':               [150],
+#         'do_pretrain':              [True],
+
+#         'g_steps':                  [2, 4],
+#         'd_steps':                  [1, 2],
+#         'k_epochs':                 [1, 2],
+
+#     },
+#     'output_dir': RESULTS_DIR / "generator_search_flair12",
+# }
+
+# PARALLEL_CONFIG = {
+    
+#     'num_seeds':                    20,
+#     'param_grid': {
+        
+#         'g_embedding_dim':          [64],
+#         'g_hidden_dim':             [128],
+
+#         'g_pretrain_batch_size':    [128], 
+#         'g_adv_batch_size':         [128], 
+
+#         'g_learning_rate':          [1e-3, 8e-4],
+#         'd_learning_rate':          [3e-5],
+
+#         'pretrain_epochs':          [200],
+#         'adv_epochs':               [150],
+#         'do_pretrain':              [True],
+
+#         'g_steps':                  [2, 4],
+#         'd_steps':                  [1, 2],
+#         'k_epochs':                 [1, 2],
+
+#     },
+#     'output_dir': RESULTS_DIR / "generator_search_flair12",
+# }
 
 
 def get_config_hash(config):

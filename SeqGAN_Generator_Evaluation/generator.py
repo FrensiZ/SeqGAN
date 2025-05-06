@@ -6,51 +6,61 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
 class Generator(nn.Module):
-
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device, num_layers=2):
+    
+    def __init__(self, vocab_size, hidden_dim, sequence_length, start_token, device, num_layers=2):
         
         super(Generator, self).__init__()
         
         self.vocab_size = vocab_size
-        self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.sequence_length = sequence_length
         self.start_token = start_token
         self.num_layers = num_layers
-            
         self.device = device
         
-        # Define layers
-        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers, batch_first=True)
-        self.output_layer = nn.Linear(hidden_dim, vocab_size)
-                
+        self.lstm = nn.LSTM(vocab_size, hidden_dim, num_layers=num_layers, batch_first=True)
+        #self.fc1 = nn.Linear(hidden_dim, hidden_dim//2)             # MLP head
+        self.output_layer = nn.Linear(hidden_dim, vocab_size)    # Action head
+
         # Initialize on device
         self.to(self.device)
+    
+    def _to_onehot(self, tokens):
+        """Convert batch of tokens to one-hot vectors"""
+        batch_size, seq_length = tokens.shape
+        onehot = th.zeros(batch_size, seq_length, self.vocab_size, device=self.device)
+        return onehot.scatter_(2, tokens.unsqueeze(-1), 1)
+    
+    def _to_onehot_single(self, token):
+        """Convert single token to one-hot vector for generation"""
+        onehot = th.zeros(1, 1, self.vocab_size, device=self.device)
+        return onehot.scatter_(2, token.view(1, 1, 1), 1)
        
     def forward(self, x, hidden=None):
 
-        emb = self.embeddings(x)                    # [batch_size, sequence_length, embedding_dim]
-        lstm_out, hidden = self.lstm(emb, hidden)   # lstm_out: [batch_size, sequence_length, hidden_dim]
-        logits = self.output_layer(lstm_out)        # [batch_size, sequence_length, vocab_size]
+        if x.dim() == 2:                            # [batch_size, sequence_length]
+            x_onehot = self._to_onehot(x)           # [batch_size, sequence_length, vocab_size]
+        else:  
+            x_onehot = self._to_onehot_single(x)    # Single token [batch_size, 1]
+        
+        lstm_out, hidden = self.lstm(x_onehot, hidden)  # lstm_out: [batch_size, sequence_length, hidden_dim]
+        #mlp_out = F.relu(self.fc1(lstm_out))            # MLP with ReLU
+        logits = self.output_layer(lstm_out)             # Output layer
         
         return logits, hidden
     
     def generate(self, num_samples):
-
+        
         with th.no_grad():
-            
             # Start token for all sequences
             x = th.full((num_samples, 1), self.start_token, dtype=th.long, device=self.device)
-            hidden = None  # Let Pyth initialize the hidden state
+            hidden = None  # Let PyTorch initialize the hidden state
 
             generated_sequences = th.zeros(num_samples, self.sequence_length, dtype=th.long, device=self.device)
 
             for i in range(self.sequence_length):
                 # Forward pass
-                emb = self.embeddings(x[:, -1:])  # Only use the last token
-                lstm_out, hidden = self.lstm(emb, hidden)
-                logits = self.output_layer(lstm_out)
+                logits, hidden = self.forward(x[:, -1:], hidden)
                 
                 # Sample from distribution
                 probs = F.softmax(logits.squeeze(1), dim=-1)
@@ -59,16 +69,16 @@ class Generator(nn.Module):
                 # Add to sequence
                 generated_sequences[:, i] = next_token.squeeze()
                 
-                # Update input for next step (only need the current token, not the entire history)
+                # Update input for next step
                 x = next_token
             
             return generated_sequences
 
     def pretrain_step(self, x, optimizer):
-
+        
         optimizer.zero_grad()
             
-        inputs = x[:, :-1]                  # Forward pass - input is all tokens except last one
+        inputs = x[:, :-1]                  # Input is all tokens except last one
         targets = x[:, 1:].contiguous()     # Target is all tokens except first one (shifted by 1)
         
         logits, _ = self.forward(inputs)
@@ -176,3 +186,79 @@ def generator_adversarial_update(generator, sequences, rewards, optimizer):
     optimizer.step()
     
     return loss.item()
+
+
+class Generator_EMBEDDING(nn.Module):
+
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, sequence_length, start_token, device, num_layers=2):
+        
+        super(Generator_EMBEDDING, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.hidden_dim = hidden_dim
+        self.sequence_length = sequence_length
+        self.start_token = start_token
+        self.num_layers = num_layers
+            
+        self.device = device
+        
+        # Define layers
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.lstm = nn.LSTM(embedding_dim, hidden_dim, num_layers=num_layers, batch_first=True)
+        self.output_layer = nn.Linear(hidden_dim, vocab_size)
+                
+        # Initialize on device
+        self.to(self.device)
+       
+    def forward(self, x, hidden=None):
+
+        emb = self.embeddings(x)                    # [batch_size, sequence_length, embedding_dim]
+        lstm_out, hidden = self.lstm(emb, hidden)   # lstm_out: [batch_size, sequence_length, hidden_dim]
+        logits = self.output_layer(lstm_out)        # [batch_size, sequence_length, vocab_size]
+        
+        return logits, hidden
+    
+    def generate(self, num_samples):
+
+        with th.no_grad():
+            
+            # Start token for all sequences
+            x = th.full((num_samples, 1), self.start_token, dtype=th.long, device=self.device)
+            hidden = None  # Let Pyth initialize the hidden state
+
+            generated_sequences = th.zeros(num_samples, self.sequence_length, dtype=th.long, device=self.device)
+
+            for i in range(self.sequence_length):
+                # Forward pass
+                emb = self.embeddings(x[:, -1:])  # Only use the last token
+                lstm_out, hidden = self.lstm(emb, hidden)
+                logits = self.output_layer(lstm_out)
+                
+                # Sample from distribution
+                probs = F.softmax(logits.squeeze(1), dim=-1)
+                next_token = th.multinomial(probs, 1)
+                
+                # Add to sequence
+                generated_sequences[:, i] = next_token.squeeze()
+                
+                # Update input for next step (only need the current token, not the entire history)
+                x = next_token
+            
+            return generated_sequences
+
+    def pretrain_step(self, x, optimizer):
+
+        optimizer.zero_grad()
+            
+        inputs = x[:, :-1]                  # Forward pass - input is all tokens except last one
+        targets = x[:, 1:].contiguous()     # Target is all tokens except first one (shifted by 1)
+        
+        logits, _ = self.forward(inputs)
+    
+        loss = F.cross_entropy(logits.reshape(-1, self.vocab_size), targets.reshape(-1))
+        
+        loss.backward()
+        optimizer.step()
+        
+        return loss.item()

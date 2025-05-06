@@ -38,7 +38,7 @@ ORACLE_HIDDEN_DIM = 32
 G_EVAL_FREQ = 1
 G_LR_PATIENCE = 5
 G_LR_DECAY = 0.5
-G_PRETRAIN_LR = 5e-3
+G_PRETRAIN_LR = 1e-2
 
 # DISCRIMINATOR
 DISCRIMINATOR_EMB_DIM = 64
@@ -255,7 +255,6 @@ def main():
     # Create Generator
     generator = Generator(
         vocab_size=VOCAB_SIZE,
-        embedding_dim=config['g_embedding_dim'],
         hidden_dim=config['g_hidden_dim'],
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,

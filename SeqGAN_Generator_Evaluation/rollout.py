@@ -14,7 +14,6 @@ class Rollout:
         # Copy the generator's parameters
         self.generator_copy = type(generator)(
             generator.vocab_size,
-            generator.embedding_dim,
             generator.hidden_dim,
             generator.sequence_length,
             generator.start_token,
@@ -83,11 +82,15 @@ class Rollout:
             
             # Process the fixed part to get the hidden state
             if fixed_length > 0:
-                # Get embeddings for the fixed tokens
-                emb = self.generator_copy.embeddings(current_input)
+
+                _, h = self.generator_copy.forward(current_input, h)
                 
-                # Process through LSTM (we'll discard the outputs)
-                _, h = self.generator_copy.lstm(emb, h)
+                # ## OLD CODE ##
+                # # Get embeddings for the fixed tokens
+                # emb = self.generator_copy.embeddings(current_input)
+                # # Process through LSTM (we'll discard the outputs)
+                # _, h = self.generator_copy.lstm(emb, h)
+                # ## OLD CODE ##
             
             # Generate the remaining tokens one at a time
             current_token = sequences[:, fixed_length-1:fixed_length] if fixed_length > 0 else th.full(
@@ -96,10 +99,15 @@ class Rollout:
             
             # Complete the sequence token by token
             for t in range(fixed_length, seq_length):
+                
                 # Get the next token distribution
-                emb = self.generator_copy.embeddings(current_token)
-                lstm_out, h = self.generator_copy.lstm(emb, h)
-                logits = self.generator_copy.output_layer(lstm_out)
+                logits, h = self.generator_copy.forward(current_token, h)
+                
+                # ## OLD CODE ##
+                # emb = self.generator_copy.embeddings(current_token)
+                # lstm_out, h = self.generator_copy.lstm(emb, h)
+                # logits = self.generator_copy.output_layer(lstm_out)
+                # ## OLD CODE ##
                 
                 # Sample from the distribution
                 probs = F.softmax(logits.squeeze(1), dim=-1)
