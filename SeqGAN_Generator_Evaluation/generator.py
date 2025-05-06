@@ -19,7 +19,6 @@ class Generator(nn.Module):
         self.device = device
         
         self.lstm = nn.LSTM(vocab_size, hidden_dim, num_layers=num_layers, batch_first=True)
-        #self.fc1 = nn.Linear(hidden_dim, hidden_dim//2)             # MLP head
         self.output_layer = nn.Linear(hidden_dim, vocab_size)    # Action head
 
         # Initialize on device
@@ -44,7 +43,6 @@ class Generator(nn.Module):
             x_onehot = self._to_onehot_single(x)    # Single token [batch_size, 1]
         
         lstm_out, hidden = self.lstm(x_onehot, hidden)  # lstm_out: [batch_size, sequence_length, hidden_dim]
-        #mlp_out = F.relu(self.fc1(lstm_out))            # MLP with ReLU
         logits = self.output_layer(lstm_out)             # Output layer
         
         return logits, hidden
@@ -89,6 +87,7 @@ class Generator(nn.Module):
         optimizer.step()
         
         return loss.item()
+
 
 def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_size, generated_num, positive_samples, eval_freq, lr_patience, lr_decay, log_path):
     
@@ -156,7 +155,8 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
     log.close()
     
     print('Pretraining finished!')
-    
+
+
 def generator_adversarial_update(generator, sequences, rewards, optimizer):
 
     optimizer.zero_grad()
@@ -186,6 +186,7 @@ def generator_adversarial_update(generator, sequences, rewards, optimizer):
     optimizer.step()
     
     return loss.item()
+
 
 
 class Generator_EMBEDDING(nn.Module):
