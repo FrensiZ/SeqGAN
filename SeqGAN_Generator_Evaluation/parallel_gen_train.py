@@ -24,7 +24,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds':                    4,
+    'num_seeds':                    3,
     'param_grid': {
         
         'g_hidden_dim':             [256],
@@ -40,8 +40,8 @@ PARALLEL_CONFIG = {
         'do_pretrain':              [True],
 
         'g_steps':                  [1, 3, 5],
-        'd_steps':                  [1, 3, 5],
-        'k_epochs':                 [1, 2, 3],
+        'd_steps':                  [1, 2],
+        'k_epochs':                 [1, 2],
 
     },
     'output_dir': RESULTS_DIR / "generator_search_flair12",
