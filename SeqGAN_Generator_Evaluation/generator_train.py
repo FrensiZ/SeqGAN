@@ -28,7 +28,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 VOCAB_SIZE = 5000
 SEQ_LENGTH = 20
 START_TOKEN = 0
-GENERATED_NUM = 10000  # Number of samples to generate for testing
+GENERATED_NUM = 5000
 
 # Oracle/Generator model parameters
 ORACLE_EMB_DIM = 32
