@@ -47,57 +47,6 @@ PARALLEL_CONFIG = {
     'output_dir': RESULTS_DIR / "generator_search_flair12",
 }
 
-# PARALLEL_CONFIG = {
-    
-#     'num_seeds':                    20,
-#     'param_grid': {
-        
-#         'g_hidden_dim':             [128],
-
-#         'g_pretrain_batch_size':    [128], 
-#         'g_adv_batch_size':         [128], 
-
-#         'g_learning_rate':          [1e-3, 8e-4],
-#         'd_learning_rate':          [3e-5],
-
-#         'pretrain_epochs':          [200],
-#         'adv_epochs':               [150],
-#         'do_pretrain':              [True],
-
-#         'g_steps':                  [2, 4],
-#         'd_steps':                  [1, 2],
-#         'k_epochs':                 [1, 2],
-
-#     },
-#     'output_dir': RESULTS_DIR / "generator_search_flair12",
-# }
-
-# PARALLEL_CONFIG = {
-    
-#     'num_seeds':                    20,
-#     'param_grid': {
-        
-#         'g_embedding_dim':          [64],
-#         'g_hidden_dim':             [128],
-
-#         'g_pretrain_batch_size':    [128], 
-#         'g_adv_batch_size':         [128], 
-
-#         'g_learning_rate':          [1e-3, 8e-4],
-#         'd_learning_rate':          [3e-5],
-
-#         'pretrain_epochs':          [200],
-#         'adv_epochs':               [150],
-#         'do_pretrain':              [True],
-
-#         'g_steps':                  [2, 4],
-#         'd_steps':                  [1, 2],
-#         'k_epochs':                 [1, 2],
-
-#     },
-#     'output_dir': RESULTS_DIR / "generator_search_flair12",
-# }
-
 
 def get_config_hash(config):
     """Generate a unique hash for a configuration."""
