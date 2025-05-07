@@ -32,14 +32,14 @@ PARALLEL_CONFIG = {
         'g_pretrain_batch_size':    [128], 
         'g_adv_batch_size':         [32, 64, 128], 
 
-        'g_learning_rate':          [5e-3, 3e-3, 1e-3, 8e-4],
-        'd_learning_rate':          [1e-6, 1e-5],
+        'g_learning_rate':          [2e-3, 1e-3, 8e-4],
+        'd_learning_rate':          [1e-5, 5e-6],
 
         'pretrain_epochs':          [100],
         'adv_epochs':               [100],
         'do_pretrain':              [True],
 
-        'g_steps':                  [2, 3, 5],
+        'g_steps':                  [1, 3, 5],
         'd_steps':                  [1, 2],
         'k_epochs':                 [1, 2],
 
