@@ -1,3 +1,8 @@
+#####
+#####       YOU FORGOT TRANSFER PRELEARNING
+#####
+
+
 import os
 import time
 import json
@@ -17,7 +22,7 @@ from rollout import Rollout
 # ============= BASE DIRECTORIES =============
 BASE_DIR = Path(os.getenv('WORKING_DIR', Path(os.path.dirname(os.path.abspath(__file__)))))
 SAVE_DIR = BASE_DIR / "saved_models"
-RESULTS_DIR = BASE_DIR / "results"
+RESULTS_DIR = BASE_DIR / "results_new"
 
 # Create directories if they don't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
@@ -28,14 +33,14 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 VOCAB_SIZE = 5000
 SEQ_LENGTH = 20
 START_TOKEN = 0
-GENERATED_NUM = 10000
+GENERATED_NUM = 5000
 
 # Oracle/Generator model parameters
 ORACLE_EMB_DIM = 32
 ORACLE_HIDDEN_DIM = 32
 
 # GENERATOR
-G_EVAL_FREQ = 2
+G_EVAL_FREQ = 1
 G_LR_PATIENCE = 5
 G_LR_DECAY = 0.5
 G_PRETRAIN_LR = 1e-2
@@ -156,12 +161,12 @@ def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_
             generator.eval()
             
             # Generate samples for evaluation
-            eval_samples = generator.generate(generated_num//10)
+            eval_samples = generator.generate(int(generated_num/5))
             # Calculate NLL using oracle
             nll = target_lstm.calculate_nll(eval_samples)
             
             # Evaluate discriminator performance
-            disc_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=generated_num//10)
+            disc_metrics = evaluate_discriminator(discriminator, target_lstm, generator, num_samples=int(generated_num/5))
             d_accuracy = disc_metrics['accuracy']
             real_prob = disc_metrics['real_prob']
             fake_prob = disc_metrics['fake_prob']
@@ -327,28 +332,8 @@ def main():
         gen_save_path = os.path.join(output_dir, "generator_pretrained.pth")
         disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
         th.save(generator.state_dict(), gen_save_path)
-        # Save discriminator with optimizer state
-        th.save({
-            'model_state_dict': discriminator.state_dict(),
-            'optimizer_state_dict': d_optimizer_pretrain.state_dict()
-            }, disc_save_path)
-        
-        pretrain_state = d_optimizer_pretrain.state_dict()
-        d_optimizer_state = d_optimizer.state_dict()
-        
-        # Copy everything except param_groups (which contains the learning rate)
-        for key in pretrain_state.keys():
-            if key != 'param_groups':
-                d_optimizer_state[key] = pretrain_state[key]
-        
-        # For param_groups, copy everything except learning rate
-        for pg_pretrain, pg_adv in zip(pretrain_state['param_groups'], d_optimizer_state['param_groups']):
-            for k in pg_pretrain.keys():
-                if k != 'lr':  # Keep all parameters except learning rate
-                    pg_adv[k] = pg_pretrain[k]
-        
-        # Load the modified state
-        d_optimizer.load_state_dict(d_optimizer_state)
+        th.save(discriminator.state_dict(), disc_save_path)
+        print(f"Saved pretrained models to {output_dir}")
 
     else:
         # Load pretrained models if not doing pretraining
@@ -358,10 +343,10 @@ def main():
             disc_load_path = config.get('disc_load_path', DISC_PRETRAIN_PATH)
             
             generator.load_state_dict(th.load(gen_load_path, map_location=device))
-
-            # Load discriminator model only
-            disc_checkpoint = th.load(disc_load_path, map_location=device)
-            discriminator.load_state_dict(disc_checkpoint['model_state_dict'])
+            
+            checkpoint = th.load(disc_load_path, map_location=device)
+            discriminator.load_state_dict(checkpoint['model_state_dict'])
+            d_optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
                         
         except Exception as e:
             print(f"Error loading pretrained models: {e}")

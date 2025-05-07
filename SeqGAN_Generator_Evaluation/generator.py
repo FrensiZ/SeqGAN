@@ -117,7 +117,7 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
         # Evaluate using the oracle every eval_freq epochs
         if epoch % eval_freq == 0 or epoch == pre_epoch_num - 1:
 
-            generated_samples = generator.generate(int(generated_num/5))
+            generated_samples = generator.generate(generated_num//10)
             
             # Calculate NLL using the oracle
             nll = target_lstm.calculate_nll(generated_samples)
