@@ -72,7 +72,6 @@ def set_seed(seed):
         th.backends.cudnn.deterministic = True
         th.backends.cudnn.benchmark = False
 
-
 def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_optimizer, 
                 num_epochs, batch_size, generated_num, positive_samples, g_steps, d_steps, k_epochs, 
                 log_path, log_path_reward, device):
