@@ -29,13 +29,13 @@ PARALLEL_CONFIG = {
         
         'g_hidden_dim':             [256],
 
-        'g_pretrain_batch_size':    [64], 
+        'g_pretrain_batch_size':    [128], 
         'g_adv_batch_size':         [32, 64], 
 
         'g_learning_rate':          [1e-3, 1e-4, 1e-5],
         'd_learning_rate':          [1e-5],
 
-        'pretrain_epochs':          [50],
+        'pretrain_epochs':          [100],
         'adv_epochs':               [100],
         'do_pretrain':              [True],
 
