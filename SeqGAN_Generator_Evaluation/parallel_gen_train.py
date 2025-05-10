@@ -24,24 +24,24 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds':                    4,
+    'num_seeds':                    20,
     'param_grid': {
         
         'g_hidden_dim':             [256],
 
         'g_pretrain_batch_size':    [128], 
-        'g_adv_batch_size':         [64, 128], 
+        'g_adv_batch_size':         [64], 
 
-        'g_learning_rate':          [2e-3, 9e-4],
-        'd_learning_rate':          [1e-5, 5e-6],
+        'g_learning_rate':          [1.5e-3],
+        'd_learning_rate':          [7.5e-6],
 
-        'pretrain_epochs':          [50],
-        'adv_epochs':               [100],
+        'pretrain_epochs':          [60],
+        'adv_epochs':               [80],
         'do_pretrain':              [True],
 
-        'g_steps':                  [1, 3, 5],
-        'd_steps':                  [1, 2],
-        'k_epochs':                 [1, 2],
+        'g_steps':                  [1],
+        'd_steps':                  [2],
+        'k_epochs':                 [2],
 
     },
     'output_dir': RESULTS_DIR / "generator_search_flair12",
@@ -54,7 +54,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [0,1,2,3,4,5]  # Only use these GPUs
+    allowed_gpus = [6,7]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 
@@ -125,7 +125,7 @@ def run_training(config, gpu_id, seed, output_dir):
     
     return process
 
-def analyze_results(output_dir, configs, num_seeds):
+# def analyze_results(output_dir, configs, num_seeds):
     """
     Analyze results from all training runs.
     
@@ -361,12 +361,12 @@ def main():
             print(f"Active processes: {len(active_processes)}")
         
         # Sleep to prevent CPU spinning
-        time.sleep(4)
+        time.sleep(3)
     
     print("\nAll training runs completed!")
     
     # Analyze results
-    analyze_results(output_dir, configs, PARALLEL_CONFIG['num_seeds'])
+    #analyze_results(output_dir, configs, PARALLEL_CONFIG['num_seeds'])
     
     print(f"All done! Results saved to {output_dir}")
 

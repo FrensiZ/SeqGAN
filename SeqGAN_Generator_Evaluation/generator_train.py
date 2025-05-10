@@ -58,8 +58,8 @@ ROLLOUT_UPDATE_RATE = 0.8
 
 # Paths for models
 ORACLE_PARAMS_PATH = SAVE_DIR / 'target_params.pkl'
-GEN_PRETRAIN_PATH = SAVE_DIR / 'generator_pretrained.pth'
-DISC_PRETRAIN_PATH = SAVE_DIR / 'discriminator_pretrained.pth'
+# GEN_PRETRAIN_PATH = SAVE_DIR / 'generator_pretrained.pth'
+# DISC_PRETRAIN_PATH = SAVE_DIR / 'discriminator_pretrained.pth'
 
 def set_seed(seed):
     """Set random seed for reproducibility."""
@@ -216,11 +216,10 @@ def main():
     
     # Create log file paths
     log_folder = output_dir
-    log_file = os.path.join(log_folder, "training.log")
-    gen_pretrain_log = os.path.join(log_folder, "generator_pretrain.txt")
-    disc_pretrain_log = os.path.join(log_folder, "discriminator_pretrain.txt")
-    adversarial_log = os.path.join(log_folder, "adversarial_training_log.txt")
-    reward_log = os.path.join(log_folder, "rewards_log.txt")
+    gen_pretrain_log = os.path.join(log_folder, "1_generator_pretrain.txt")
+    disc_pretrain_log = os.path.join(log_folder, "2_discriminator_pretrain.txt")
+    adversarial_log = os.path.join(log_folder, "0_adversarial_training_log.txt")
+    reward_log = os.path.join(log_folder, "3_rewards_log.txt")
     
     # Print training configuration
     print(f"Training generator with:")
@@ -278,13 +277,12 @@ def main():
     g_optimizer = th.optim.Adam(generator.parameters(), lr=config['g_learning_rate'])
     d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
 
-    # ===== CHANGE 1: Generate positive samples once here =====
+    # Generate positive samples
     print("Generating real data from oracle (target LSTM)...")
     oracle.eval()
     with th.no_grad():
         positive_samples = oracle.generate(GENERATED_NUM)
     print(f"Generated {GENERATED_NUM} positive samples.")
-    # =======================================================
 
     # Pretraining phase
     if config.get('do_pretrain', True):
@@ -317,21 +315,21 @@ def main():
             batch_size=D_BATCH_SIZE,
             generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
-            log_file=log_file,
+            log_file=disc_pretrain_log,
             lr_patience=D_LR_PATIENCE,
             lr_decay=D_LR_DECAY,
             min_lr=D_LR_MIN
         )
 
-        # Save pretrained models
-        gen_save_path = os.path.join(output_dir, "generator_pretrained.pth")
-        disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
-        th.save(generator.state_dict(), gen_save_path)
-        # Save discriminator with optimizer state
-        th.save({
-            'model_state_dict': discriminator.state_dict(),
-            'optimizer_state_dict': d_optimizer_pretrain.state_dict()
-            }, disc_save_path)
+        # # Save pretrained models
+        # gen_save_path = os.path.join(output_dir, "generator_pretrained.pth")
+        # disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
+        # th.save(generator.state_dict(), gen_save_path)
+        # # Save discriminator with optimizer state
+        # th.save({
+        #     'model_state_dict': discriminator.state_dict(),
+        #     'optimizer_state_dict': d_optimizer_pretrain.state_dict()
+        #     }, disc_save_path)
         
         pretrain_state = d_optimizer_pretrain.state_dict()
         d_optimizer_state = d_optimizer.state_dict()
@@ -399,35 +397,35 @@ def main():
     )
     
     # Save final models
-    final_gen_path = os.path.join(output_dir, "generator_final.pth")
-    final_disc_path = os.path.join(output_dir, "discriminator_final.pth")
-    th.save(generator.state_dict(), final_gen_path)
-    th.save(discriminator.state_dict(), final_disc_path)
+    # final_gen_path = os.path.join(output_dir, "generator_final.pth")
+    # final_disc_path = os.path.join(output_dir, "discriminator_final.pth")
+    # th.save(generator.state_dict(), final_gen_path)
+    # th.save(discriminator.state_dict(), final_disc_path)
     
     # Record training time
     training_time = time.time() - start_time
     
     # Add seed to config for results
-    config_with_seed = config.copy()
-    config_with_seed['seed'] = seed
+    # config_with_seed = config.copy()
+    # config_with_seed['seed'] = seed
     
-    # Generate final samples for evaluation
-    generator.eval()
-    final_samples = generator.generate(GENERATED_NUM)
-    final_nll = oracle.calculate_nll(final_samples)
+    # # Generate final samples for evaluation
+    # generator.eval()
+    # final_samples = generator.generate(GENERATED_NUM)
+    # final_nll = oracle.calculate_nll(final_samples)
     
     # Create results summary
     results = {
         "config": config_with_seed,
-        "training_time": training_time,
-        "final_metrics": {
-            "nll": final_nll,
-            "discriminator": evaluate_discriminator(discriminator, oracle, generator, num_samples=1000)
-        },
-        "model_paths": {
-            "generator": str(final_gen_path),
-            "discriminator": str(final_disc_path)
-        }
+        "training_time": training_time
+        # "final_metrics": {
+        #     "nll": final_nll,
+        #     "discriminator": evaluate_discriminator(discriminator, oracle, generator, num_samples=1000)
+        # },
+        # "model_paths": {
+        #     "generator": str(final_gen_path),
+        #     "discriminator": str(final_disc_path)
+        # }
     }
     
     # Save results
