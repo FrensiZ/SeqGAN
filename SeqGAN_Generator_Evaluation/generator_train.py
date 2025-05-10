@@ -72,9 +72,8 @@ def set_seed(seed):
         th.backends.cudnn.deterministic = True
         th.backends.cudnn.benchmark = False
 
-
 def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_optimizer, 
-                num_epochs, g_batch_size, d_batch_size, generated_num, positive_samples, g_steps, d_steps, k_epochs, 
+                num_epochs, batch_size, generated_num, positive_samples, g_steps, d_steps, k_epochs, 
                 log_path, log_path_reward, device):
     
     # Open log file
@@ -95,7 +94,7 @@ def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_
         for _ in range(g_steps):
             # Generate sequences
             generator.train()
-            sequences = generator.generate(g_batch_size)
+            sequences = generator.generate(batch_size)
             
             # Get rewards using rollout
             rewards = rollout.get_reward(sequences)
@@ -131,8 +130,8 @@ def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_
             negative_examples = generator.generate(generated_num)
             
             # Create data loaders
-            pos_loader = DataLoader(TensorDataset(positive_samples), batch_size=d_batch_size, shuffle=True)
-            neg_loader = DataLoader(TensorDataset(negative_examples), batch_size=d_batch_size, shuffle=True)
+            pos_loader = DataLoader(TensorDataset(positive_samples), batch_size=batch_size, shuffle=True)
+            neg_loader = DataLoader(TensorDataset(negative_examples), batch_size=batch_size, shuffle=True)
             
             # Train discriminator for k epochs
             for _ in range(k_epochs):
@@ -385,8 +384,7 @@ def main():
         g_optimizer=g_optimizer,
         d_optimizer=d_optimizer,
         num_epochs=config['adv_epochs'],
-        g_batch_size=config['g_adv_batch_size'],
-        d_batch_size=D_BATCH_SIZE,
+        batch_size=config['g_adv_batch_size'],
         generated_num=GENERATED_NUM,
         positive_samples=positive_samples,
         g_steps=config['g_steps'],

@@ -33,7 +33,7 @@ PARALLEL_CONFIG = {
         'g_adv_batch_size':         [64],
 
         'g_learning_rate':          [8e-4],
-        'd_learning_rate':          [5e-5, 2.5e-5, 1e-5, 8e-6, 7.5e-6, 1e-6, 7.5e-7],
+        'd_learning_rate':          [1e-6],
 
         'pretrain_epochs':          [100],
         'adv_epochs':               [50],
