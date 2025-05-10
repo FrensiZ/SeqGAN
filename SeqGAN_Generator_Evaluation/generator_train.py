@@ -415,27 +415,27 @@ def main():
     # final_nll = oracle.calculate_nll(final_samples)
     
     # Create results summary
-    results = {
-        "config": config_with_seed,
-        "training_time": training_time
-        # "final_metrics": {
-        #     "nll": final_nll,
-        #     "discriminator": evaluate_discriminator(discriminator, oracle, generator, num_samples=1000)
-        # },
-        # "model_paths": {
-        #     "generator": str(final_gen_path),
-        #     "discriminator": str(final_disc_path)
-        # }
-    }
+    # results = {
+    #     "config": config_with_seed,
+    #     "training_time": training_time
+    #     "final_metrics": {
+    #         "nll": final_nll,
+    #         "discriminator": evaluate_discriminator(discriminator, oracle, generator, num_samples=1000)
+    #     },
+    #     "model_paths": {
+    #         "generator": str(final_gen_path),
+    #         "discriminator": str(final_disc_path)
+    #     }
+    # }
     
     # Save results
-    results_path = os.path.join(output_dir, "results.json")
-    with open(results_path, 'w') as f:
-        json.dump(results, f, indent=2)
+    # results_path = os.path.join(output_dir, "results.json")
+    # with open(results_path, 'w') as f:
+    #     json.dump(results, f, indent=2)
     
     print(f"Training completed in {training_time:.2f} seconds!")
-    print(f"Results saved to {output_dir}")
-    print(f"Final NLL: {final_nll:.4f}")
+    # print(f"Results saved to {output_dir}")
+    # print(f"Final NLL: {final_nll:.4f}")
 
 if __name__ == "__main__":
     main()
