@@ -1,0 +1,144 @@
+Loading config from: /workspace/results/generator_search_flair12/config_0_seed_31/config.json
+Using GPU: 4
+Training generator with:
+  Seed: 31
+  Device: cuda:0
+  Batch Size: 64
+  Generator Learning Rate: 0.0008
+  Discriminator Learning Rate: 1e-06
+  Pre-training Epochs: 100
+  Total Adversarial Epochs: 50
+Loading oracle parameters from /workspace/saved_models/target_params.pkl...
+Generating real data from oracle (target LSTM)...
+Generated 10000 positive samples.
+Starting generator pretraining...
+Start pre-training...
+Epoch 0, NLL: 11.4411
+Epoch 5, NLL: 9.7903
+Epoch 10, NLL: 9.3651
+Epoch 15, NLL: 9.2438
+Epoch 20, NLL: 9.1403
+Epoch 25, NLL: 8.8831
+Epoch 30, NLL: 8.9027
+Epoch 35, NLL: 8.8516
+Epoch 40, NLL: 8.8772
+Epoch 45, NLL: 8.8437
+Learning rate reduced to 0.005
+Epoch 50, NLL: 9.0691
+Learning rate reduced to 0.0025
+Epoch 55, NLL: 9.0227
+Epoch 60, NLL: 9.0144
+Epoch 65, NLL: 9.0094
+Epoch 70, NLL: 9.0112
+Epoch 75, NLL: 8.9729
+Epoch 80, NLL: 8.9730
+Epoch 85, NLL: 8.9703
+Epoch 90, NLL: 8.9574
+Learning rate reduced to 0.00125
+Epoch 95, NLL: 8.9983
+Epoch 99, NLL: 9.0049
+Pretraining finished!
+Starting discriminator pretraining...
+Starting adversarial training...
+Epoch 0
+Epoch 0, NLL: 8.9746, PG Loss: 0.5297, D Loss: 0.2656, D Acc: 0.9470, Real Prob: 0.7326, Fake Prob: 0.0725, Avg Reward: 0.1053
+Epoch 1
+Epoch 1, NLL: 8.9377, PG Loss: 0.3758, D Loss: 0.2643, D Acc: 0.9535, Real Prob: 0.7438, Fake Prob: 0.0647, Avg Reward: 0.0839
+Epoch 2
+Epoch 2, NLL: 8.9465, PG Loss: 0.4100, D Loss: 0.2605, D Acc: 0.9540, Real Prob: 0.7548, Fake Prob: 0.0646, Avg Reward: 0.0928
+Epoch 3
+Epoch 3, NLL: 8.9987, PG Loss: 0.4133, D Loss: 0.2558, D Acc: 0.9500, Real Prob: 0.7592, Fake Prob: 0.0729, Avg Reward: 0.0891
+Epoch 4
+Epoch 4, NLL: 8.9855, PG Loss: 0.2879, D Loss: 0.2556, D Acc: 0.9485, Real Prob: 0.7620, Fake Prob: 0.0646, Avg Reward: 0.0728
+Epoch 5
+Epoch 5, NLL: 8.9696, PG Loss: 0.4504, D Loss: 0.2509, D Acc: 0.9555, Real Prob: 0.7831, Fake Prob: 0.0782, Avg Reward: 0.0970
+Epoch 6
+Epoch 6, NLL: 8.9703, PG Loss: 0.5318, D Loss: 0.2505, D Acc: 0.9595, Real Prob: 0.7847, Fake Prob: 0.0627, Avg Reward: 0.1158
+Epoch 7
+Epoch 7, NLL: 8.9705, PG Loss: 0.4849, D Loss: 0.2517, D Acc: 0.9580, Real Prob: 0.7869, Fake Prob: 0.0616, Avg Reward: 0.1053
+Epoch 8
+Epoch 8, NLL: 8.9676, PG Loss: 0.5569, D Loss: 0.2511, D Acc: 0.9570, Real Prob: 0.7941, Fake Prob: 0.0662, Avg Reward: 0.1203
+Epoch 9
+Epoch 9, NLL: 8.9631, PG Loss: 0.4676, D Loss: 0.2480, D Acc: 0.9625, Real Prob: 0.8013, Fake Prob: 0.0619, Avg Reward: 0.0992
+Epoch 10
+Epoch 10, NLL: 8.9769, PG Loss: 0.4572, D Loss: 0.2481, D Acc: 0.9515, Real Prob: 0.8052, Fake Prob: 0.0675, Avg Reward: 0.0999
+Epoch 11
+Epoch 11, NLL: 9.0215, PG Loss: 0.4161, D Loss: 0.2472, D Acc: 0.9640, Real Prob: 0.8077, Fake Prob: 0.0599, Avg Reward: 0.1008
+Epoch 12
+Epoch 12, NLL: 8.9611, PG Loss: 0.3341, D Loss: 0.2501, D Acc: 0.9530, Real Prob: 0.8095, Fake Prob: 0.0669, Avg Reward: 0.0881
+Epoch 13
+Epoch 13, NLL: 8.9846, PG Loss: 0.3932, D Loss: 0.2493, D Acc: 0.9525, Real Prob: 0.8149, Fake Prob: 0.0754, Avg Reward: 0.0964
+Epoch 14
+Epoch 14, NLL: 8.9463, PG Loss: 0.3903, D Loss: 0.2471, D Acc: 0.9575, Real Prob: 0.8127, Fake Prob: 0.0606, Avg Reward: 0.0988
+Epoch 15
+Epoch 15, NLL: 8.9796, PG Loss: 0.3388, D Loss: 0.2469, D Acc: 0.9615, Real Prob: 0.8178, Fake Prob: 0.0593, Avg Reward: 0.0920
+Epoch 16
+Epoch 16, NLL: 8.9785, PG Loss: 0.3674, D Loss: 0.2439, D Acc: 0.9630, Real Prob: 0.8277, Fake Prob: 0.0637, Avg Reward: 0.0916
+Epoch 17
+Epoch 17, NLL: 8.9332, PG Loss: 0.4054, D Loss: 0.2449, D Acc: 0.9595, Real Prob: 0.8214, Fake Prob: 0.0598, Avg Reward: 0.1006
+Epoch 18
+Epoch 18, NLL: 8.9100, PG Loss: 0.4339, D Loss: 0.2466, D Acc: 0.9550, Real Prob: 0.8237, Fake Prob: 0.0735, Avg Reward: 0.1027
+Epoch 19
+Epoch 19, NLL: 8.9376, PG Loss: 0.4688, D Loss: 0.2467, D Acc: 0.9610, Real Prob: 0.8201, Fake Prob: 0.0558, Avg Reward: 0.1085
+Epoch 20
+Epoch 20, NLL: 8.9617, PG Loss: 0.2929, D Loss: 0.2470, D Acc: 0.9535, Real Prob: 0.8233, Fake Prob: 0.0708, Avg Reward: 0.0845
+Epoch 21
+Epoch 21, NLL: 8.9861, PG Loss: 0.4205, D Loss: 0.2481, D Acc: 0.9530, Real Prob: 0.8184, Fake Prob: 0.0653, Avg Reward: 0.1003
+Epoch 22
+Epoch 22, NLL: 8.9387, PG Loss: 0.4005, D Loss: 0.2501, D Acc: 0.9575, Real Prob: 0.8240, Fake Prob: 0.0581, Avg Reward: 0.1049
+Epoch 23
+Epoch 23, NLL: 8.9486, PG Loss: 0.3288, D Loss: 0.2492, D Acc: 0.9555, Real Prob: 0.8258, Fake Prob: 0.0736, Avg Reward: 0.0872
+Epoch 24
+Epoch 24, NLL: 8.9355, PG Loss: 0.2985, D Loss: 0.2506, D Acc: 0.9480, Real Prob: 0.8257, Fake Prob: 0.0806, Avg Reward: 0.0843
+Epoch 25
+Epoch 25, NLL: 8.9689, PG Loss: 0.3045, D Loss: 0.2512, D Acc: 0.9580, Real Prob: 0.8235, Fake Prob: 0.0633, Avg Reward: 0.0888
+Epoch 26
+Epoch 26, NLL: 8.9291, PG Loss: 0.2525, D Loss: 0.2530, D Acc: 0.9545, Real Prob: 0.8246, Fake Prob: 0.0679, Avg Reward: 0.0709
+Epoch 27
+Epoch 27, NLL: 8.9258, PG Loss: 0.4007, D Loss: 0.2558, D Acc: 0.9435, Real Prob: 0.8135, Fake Prob: 0.0850, Avg Reward: 0.1081
+Epoch 28
+Epoch 28, NLL: 8.9468, PG Loss: 0.2524, D Loss: 0.2545, D Acc: 0.9585, Real Prob: 0.8210, Fake Prob: 0.0604, Avg Reward: 0.0790
+Epoch 29
+Epoch 29, NLL: 8.8961, PG Loss: 0.2906, D Loss: 0.2564, D Acc: 0.9500, Real Prob: 0.8227, Fake Prob: 0.0754, Avg Reward: 0.0838
+Epoch 30
+Epoch 30, NLL: 8.9112, PG Loss: 0.5065, D Loss: 0.2556, D Acc: 0.9505, Real Prob: 0.8224, Fake Prob: 0.0757, Avg Reward: 0.1199
+Epoch 31
+Epoch 31, NLL: 8.9110, PG Loss: 0.2958, D Loss: 0.2588, D Acc: 0.9500, Real Prob: 0.8204, Fake Prob: 0.0777, Avg Reward: 0.0912
+Epoch 32
+Epoch 32, NLL: 8.8944, PG Loss: 0.3747, D Loss: 0.2573, D Acc: 0.9555, Real Prob: 0.8242, Fake Prob: 0.0744, Avg Reward: 0.1048
+Epoch 33
+Epoch 33, NLL: 8.8321, PG Loss: 0.3425, D Loss: 0.2578, D Acc: 0.9540, Real Prob: 0.8229, Fake Prob: 0.0763, Avg Reward: 0.0936
+Epoch 34
+Epoch 34, NLL: 8.8700, PG Loss: 0.3327, D Loss: 0.2579, D Acc: 0.9510, Real Prob: 0.8171, Fake Prob: 0.0728, Avg Reward: 0.0961
+Epoch 35
+Epoch 35, NLL: 8.8484, PG Loss: 0.3625, D Loss: 0.2570, D Acc: 0.9470, Real Prob: 0.8185, Fake Prob: 0.0797, Avg Reward: 0.1051
+Epoch 36
+Epoch 36, NLL: 8.8370, PG Loss: 0.4074, D Loss: 0.2562, D Acc: 0.9510, Real Prob: 0.8245, Fake Prob: 0.0780, Avg Reward: 0.1116
+Epoch 37
+Epoch 37, NLL: 8.8325, PG Loss: 0.2915, D Loss: 0.2609, D Acc: 0.9455, Real Prob: 0.8132, Fake Prob: 0.0744, Avg Reward: 0.0832
+Epoch 38
+Epoch 38, NLL: 8.8513, PG Loss: 0.3253, D Loss: 0.2551, D Acc: 0.9425, Real Prob: 0.8173, Fake Prob: 0.0863, Avg Reward: 0.0920
+Epoch 39
+Epoch 39, NLL: 8.8205, PG Loss: 0.4195, D Loss: 0.2563, D Acc: 0.9530, Real Prob: 0.8164, Fake Prob: 0.0709, Avg Reward: 0.1082
+Epoch 40
+Epoch 40, NLL: 8.8096, PG Loss: 0.3917, D Loss: 0.2592, D Acc: 0.9460, Real Prob: 0.8203, Fake Prob: 0.0810, Avg Reward: 0.1044
+Epoch 41
+Epoch 41, NLL: 8.7945, PG Loss: 0.3257, D Loss: 0.2578, D Acc: 0.9455, Real Prob: 0.8183, Fake Prob: 0.0848, Avg Reward: 0.0949
+Epoch 42
+Epoch 42, NLL: 8.7911, PG Loss: 0.3645, D Loss: 0.2636, D Acc: 0.9625, Real Prob: 0.8229, Fake Prob: 0.0598, Avg Reward: 0.1077
+Epoch 43
+Epoch 43, NLL: 8.7714, PG Loss: 0.2985, D Loss: 0.2603, D Acc: 0.9500, Real Prob: 0.8186, Fake Prob: 0.0722, Avg Reward: 0.0839
+Epoch 44
+Epoch 44, NLL: 8.7841, PG Loss: 0.4271, D Loss: 0.2613, D Acc: 0.9515, Real Prob: 0.8220, Fake Prob: 0.0782, Avg Reward: 0.1217
+Epoch 45
+Epoch 45, NLL: 8.7812, PG Loss: 0.3707, D Loss: 0.2624, D Acc: 0.9445, Real Prob: 0.8159, Fake Prob: 0.0836, Avg Reward: 0.1058
+Epoch 46
+Epoch 46, NLL: 8.7553, PG Loss: 0.2275, D Loss: 0.2603, D Acc: 0.9490, Real Prob: 0.8208, Fake Prob: 0.0797, Avg Reward: 0.0711
+Epoch 47
+Epoch 47, NLL: 8.7711, PG Loss: 0.3524, D Loss: 0.2608, D Acc: 0.9480, Real Prob: 0.8191, Fake Prob: 0.0847, Avg Reward: 0.1094
+Epoch 48
+Epoch 48, NLL: 8.7696, PG Loss: 0.3039, D Loss: 0.2600, D Acc: 0.9450, Real Prob: 0.8172, Fake Prob: 0.0821, Avg Reward: 0.0901
+Epoch 49
+Epoch 49, NLL: 8.7610, PG Loss: 0.3545, D Loss: 0.2636, D Acc: 0.9515, Real Prob: 0.8174, Fake Prob: 0.0759, Avg Reward: 0.1059
+Training completed!
+Training completed in 296.41 seconds!

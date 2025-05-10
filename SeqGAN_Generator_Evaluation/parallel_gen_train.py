@@ -24,7 +24,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds':                    8,
+    'num_seeds':                    40,
     'param_grid': {
         
         'g_hidden_dim':             [256],
