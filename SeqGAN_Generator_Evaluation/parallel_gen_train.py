@@ -40,8 +40,8 @@ PARALLEL_CONFIG = {
         'do_pretrain':              [True],
 
         'g_steps':                  [1],
-        'd_steps':                  [2],
-        'k_epochs':                 [2],
+        'd_steps':                  [1],
+        'k_epochs':                 [1],
 
     },
     'output_dir': RESULTS_DIR / "generator_search_flair12",

@@ -156,7 +156,6 @@ def pretrain_generator(target_lstm, generator, optimizer, pre_epoch_num, batch_s
     
     print('Pretraining finished!')
 
-
 def generator_adversarial_update(generator, sequences, rewards, optimizer):
 
     optimizer.zero_grad()
