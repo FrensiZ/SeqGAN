@@ -51,7 +51,7 @@ D_BATCH_SIZE = 128
 D_LR_PATIENCE = 10
 D_LR_DECAY = 0.5
 D_LR_MIN = 1e-5
-D_PRETRAIN_LR = 1e-3
+D_PRETRAIN_LR = 5e-3
 
 # ROLLOUT
 ROLLOUT_NUM = 16
@@ -249,6 +249,14 @@ def main():
     except Exception as e:
         print(f"Error loading oracle parameters: {e}")
         sys.exit(1)  # Exit with error code
+
+    # Generate positive samples
+    print("Generating real data from oracle (target LSTM)...")
+    oracle.eval()
+    with th.no_grad():
+        positive_samples = oracle.generate(GENERATED_NUM)
+    print(f"Generated {GENERATED_NUM} positive samples.")
+    
     
     # Create Generator
     generator = Generator(
@@ -276,12 +284,7 @@ def main():
     g_optimizer = th.optim.Adam(generator.parameters(), lr=config['g_learning_rate'])
     d_optimizer = th.optim.Adam(discriminator.parameters(), lr=config['d_learning_rate'])
 
-    # Generate positive samples
-    print("Generating real data from oracle (target LSTM)...")
-    oracle.eval()
-    with th.no_grad():
-        positive_samples = oracle.generate(GENERATED_NUM)
-    print(f"Generated {GENERATED_NUM} positive samples.")
+    gen_weights_path = None
 
     # Pretraining phase
     if config.get('do_pretrain', True):
@@ -320,15 +323,21 @@ def main():
             min_lr=D_LR_MIN
         )
 
-        # # Save pretrained models
-        # gen_save_path = os.path.join(output_dir, "generator_pretrained.pth")
-        # disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
-        # th.save(generator.state_dict(), gen_save_path)
-        # # Save discriminator with optimizer state
-        # th.save({
-        #     'model_state_dict': discriminator.state_dict(),
-        #     'optimizer_state_dict': d_optimizer_pretrain.state_dict()
-        #     }, disc_save_path)
+        # Save pretrained models
+        gen_weights_path = os.path.join(output_dir, "generator_pretrained.pth")
+        disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
+        
+        # Save generator
+        th.save({
+            'model_state_dict': generator.state_dict(),
+            'optimizer_state_dict': g_optimizer_pretrain.state_dict()
+        }, gen_weights_path)
+        
+        # Save discriminator
+        th.save({
+            'model_state_dict': discriminator.state_dict(),
+            'optimizer_state_dict': d_optimizer_pretrain.state_dict()
+        }, disc_save_path)
         
         pretrain_state = d_optimizer_pretrain.state_dict()
         d_optimizer_state = d_optimizer.state_dict()
@@ -351,18 +360,51 @@ def main():
         # Load pretrained models if not doing pretraining
         try:
             print("Loading pretrained models...")
-            gen_load_path = config.get('gen_load_path', GEN_PRETRAIN_PATH)
-            disc_load_path = config.get('disc_load_path', DISC_PRETRAIN_PATH)
             
-            generator.load_state_dict(th.load(gen_load_path, map_location=device))
-
-            # Load discriminator model only
+            # Determine paths based on seed
+            seed_prefix = f"{seed}_"
+            gen_weights_path = os.path.join(SAVE_DIR, f"{seed_prefix}generator_pretrained.pth")
+            disc_load_path = os.path.join(SAVE_DIR, f"{seed_prefix}discriminator_pretrained.pth")
+            
+            print(f"Using generator weights from: {gen_weights_path}")
+            print(f"Loading discriminator from: {disc_load_path}")
+            
+            # Load generator (only needed for the discriminator training)
+            gen_checkpoint = th.load(gen_weights_path, map_location=device)
+            generator.load_state_dict(gen_checkpoint['model_state_dict'])
+            
+            # Load discriminator
             disc_checkpoint = th.load(disc_load_path, map_location=device)
             discriminator.load_state_dict(disc_checkpoint['model_state_dict'])
-                        
+            
+            # Transfer optimizer state from pretrained discriminator to adversarial discriminator
+            print("Transferring optimizer state from pretrained discriminator to adversarial phase...")
+
+            if 'optimizer_state_dict' in disc_checkpoint:
+                pretrain_state = disc_checkpoint['optimizer_state_dict']
+                d_optimizer_state = d_optimizer.state_dict()
+                
+                # Copy everything except param_groups (which contains the learning rate)
+                for key in pretrain_state.keys():
+                    if key != 'param_groups':
+                        d_optimizer_state[key] = pretrain_state[key]
+                
+                # For param_groups, copy everything except learning rate
+                for pg_pretrain, pg_adv in zip(pretrain_state['param_groups'], d_optimizer_state['param_groups']):
+                    for k in pg_pretrain.keys():
+                        if k != 'lr':  # Keep all parameters except learning rate
+                            pg_adv[k] = pg_pretrain[k]
+                
+                # Load the modified state
+                d_optimizer.load_state_dict(d_optimizer_state)
+                print("Successfully transferred discriminator optimizer state")
+            else:
+                print("Warning: No optimizer state found in discriminator checkpoint")
+            
         except Exception as e:
             print(f"Error loading pretrained models: {e}")
             sys.exit(1)
+    
     
     # Initialize rollout module
     rollout = Rollout(

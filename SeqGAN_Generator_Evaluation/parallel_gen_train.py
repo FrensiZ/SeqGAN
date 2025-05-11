@@ -24,7 +24,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds':                    40,
+    'num_seeds':                    30,
     'param_grid': {
         
         'g_hidden_dim':             [256],
@@ -44,7 +44,7 @@ PARALLEL_CONFIG = {
         'k_epochs':                 [3],
 
     },
-    'output_dir': RESULTS_DIR / "generator_search_flair12",
+    'output_dir': RESULTS_DIR / "SeqGAN_results",
 }
 
 
