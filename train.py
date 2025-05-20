@@ -45,17 +45,6 @@ G_LR_PATIENCE = 5
 G_LR_DECAY = 0.5
 G_PRETRAIN_LR = 1e-2
 
-# DISCRIMINATOR
-DISCRIMINATOR_EMB_DIM = 64
-DISCRIMINATOR_HIDDEN_DIM = 128
-D_DROPOUT_RATE = 0.2
-D_OUTER_EPOCH = 15
-D_INNTER_EPOCH = 3
-D_BATCH_SIZE = 128
-D_LR_PATIENCE = 10
-D_LR_DECAY = 0.5
-D_LR_MIN = 1e-5
-D_PRETRAIN_LR = 5e-3
 
 # ROLLOUT
 ROLLOUT_NUM = 16
@@ -272,15 +261,15 @@ def main():
     # Create discriminator
     discriminator = Discriminator(
         vocab_size=VOCAB_SIZE,
-        embedding_dim=DISCRIMINATOR_EMB_DIM,
-        hidden_dim=DISCRIMINATOR_HIDDEN_DIM,
-        dropout_rate=D_DROPOUT_RATE,
+        embedding_dim=config['d_emb_dim'],
+        hidden_dim=config['d_hidden_dim'],
+        dropout_rate=config['d_dropout'],
         device=device
     )
     
     # Initialize optimizers
     g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=G_PRETRAIN_LR)
-    d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=D_PRETRAIN_LR)
+    d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=config['d_lr_pretrain'])
 
     # Adversarial training optimizers
     g_optimizer = th.optim.Adam(generator.parameters(), lr=config['g_learning_rate'])
@@ -314,15 +303,15 @@ def main():
             generator=generator,
             discriminator=discriminator,
             optimizer=d_optimizer_pretrain,
-            outer_epochs=D_OUTER_EPOCH,
-            inner_epochs=D_INNTER_EPOCH,
-            batch_size=D_BATCH_SIZE,
+            outer_epochs=config['d_outer_epochs'],
+            inner_epochs=config['d_inner_epochs'],
+            batch_size=config['d_batch_size'],
             generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
             log_file=disc_pretrain_log,
-            lr_patience=D_LR_PATIENCE,
-            lr_decay=D_LR_DECAY,
-            min_lr=D_LR_MIN
+            lr_patience=config['d_lr_patience'],
+            lr_decay=config['d_lr_decay'],
+            min_lr=config['d_lr_min'],
         )
 
         # Save pretrained models
