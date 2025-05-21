@@ -37,20 +37,9 @@ ORACLE_EMB_DIM = 32
 ORACLE_HIDDEN_DIM = 32
 ORACLE_PARAMS_PATH = SAVE_DIR / 'target_params.pkl'
 
-
-#### HERE ####
-# GENERATOR
-G_EVAL_FREQ = 5
-G_LR_PATIENCE = 5
-G_LR_DECAY = 0.5
-G_PRETRAIN_LR = 1e-2
-
-
 # ROLLOUT
 ROLLOUT_NUM = 16
 ROLLOUT_UPDATE_RATE = 0.8
-
-#### HERE ####
 
 
 def set_seed(seed):
@@ -255,6 +244,7 @@ def main():
         hidden_dim=config['g_hidden_dim'],
         sequence_length=SEQ_LENGTH,
         start_token=START_TOKEN,
+        num_layers=config['g_num_layers'],
         device=device
     )
     
@@ -264,11 +254,12 @@ def main():
         embedding_dim=config['d_emb_dim'],
         hidden_dim=config['d_hidden_dim'],
         dropout_rate=config['d_dropout'],
+        num_layers=config['d_num_layers'],
         device=device
     )
     
     # Initialize optimizers
-    g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=G_PRETRAIN_LR)
+    g_optimizer_pretrain = th.optim.Adam(generator.parameters(), lr=config['g_lr_pretrain'])
     d_optimizer_pretrain = th.optim.Adam(discriminator.parameters(), lr=config['d_lr_pretrain'])
 
     # Adversarial training optimizers
@@ -290,9 +281,9 @@ def main():
             batch_size=config['g_pretrain_batch_size'],
             generated_num=GENERATED_NUM,
             positive_samples=positive_samples,
-            eval_freq=G_EVAL_FREQ,
-            lr_patience=G_LR_PATIENCE,
-            lr_decay=G_LR_DECAY,
+            eval_freq=config['g_pre_eval_freq'],
+            lr_patience=config['g_lr_patience'],
+            lr_decay=cocnfig['g_lr_decay'],
             log_path=gen_pretrain_log
         )
 

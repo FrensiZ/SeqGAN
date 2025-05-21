@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 class Discriminator(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, device, num_layers):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, dropout_rate, num_layers, device):
         
         super(Discriminator, self).__init__()
         
