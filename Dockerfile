@@ -28,7 +28,7 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 WORKDIR ${WORKING_DIR}
 
 # Create necessary directories and set permissions
-RUN mkdir -p ${WORKING_DIR}/outputs ${WORKING_DIR}/logs ${WORKING_DIR}/saved_models ${WORKING_DIR}/saved_metrics_training ${WORKING_DIR}/saved_models_training ${WORKING_DIR}/data && \
+RUN mkdir -p ${WORKING_DIR}/logs ${WORKING_DIR}/saved_models && \
     chmod -R 775 ${WORKING_DIR}
 
 # Copy requirements first for better layer caching
@@ -49,10 +49,8 @@ USER myuser
 COPY --chown=myuser:users discriminator.py generator.py environment.py callback.py train.py train_parallel.py ${WORKING_DIR}/
 
 # Copy all saved model files
-COPY --chown=myuser:users saved_models/*.pth saved_models/*.zip ${WORKING_DIR}/saved_models/
+COPY --chown=myuser:users saved_models/*.pth ${WORKING_DIR}/saved_models/
 
-# Copy data files to the data directory
-COPY --chown=myuser:users data/*.npy ${WORKING_DIR}/data/
 
 # Set environment variables
 ENV PYTHONPATH="${WORKING_DIR}"

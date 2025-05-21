@@ -18,12 +18,10 @@ from rollout import Rollout
 BASE_DIR = Path(os.getenv('WORKING_DIR', Path(os.path.dirname(os.path.abspath(__file__)))))
 SAVE_DIR = BASE_DIR / "saved_models"
 RESULTS_DIR = BASE_DIR / "results"
-MODELS_DIR = BASE_DIR / "saved_models"
 
 # Create directories if they don't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
-os.makedirs(MODELS_DIR, exist_ok=True)
 
 # ============= FIXED PARAMETERS =============
 # Data parameters
