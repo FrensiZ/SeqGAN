@@ -41,7 +41,6 @@ ORACLE_PARAMS_PATH = SAVE_DIR / 'target_params.pkl'
 ROLLOUT_NUM = 16
 ROLLOUT_UPDATE_RATE = 0.8
 
-
 def set_seed(seed):
     """Set random seed for reproducibility."""
     random.seed(seed)
