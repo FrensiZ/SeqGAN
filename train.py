@@ -18,10 +18,12 @@ from rollout import Rollout
 BASE_DIR = Path(os.getenv('WORKING_DIR', Path(os.path.dirname(os.path.abspath(__file__)))))
 SAVE_DIR = BASE_DIR / "saved_models"
 RESULTS_DIR = BASE_DIR / "results"
+TEXT_DIR = BASE_DIR / "text_file_train"
 
 # Create directories if they don't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(TEXT_DIR, exist_ok=True)
 
 # ============= FIXED PARAMETERS =============
 # Data parameters
@@ -163,6 +165,7 @@ def main():
     # Get environment variables
     config_path = os.getenv('CONFIG_PATH')
     seed = int(os.getenv('SEED', '0'))
+    config_id = int(os.getenv('CONFIG_ID', '-1'))
     output_dir = Path(os.getenv('OUTPUT_DIR', RESULTS_DIR))
     
     # Set seed for reproducibility
@@ -193,10 +196,10 @@ def main():
     start_time = time.time()
     
     # Create log file paths
-    adversarial_log = os.path.join(output_dir, "0_adversarial_training_log.txt")
-    gen_pretrain_log = os.path.join(output_dir, "1_generator_pretrain.txt")
-    disc_pretrain_log = os.path.join(output_dir, "2_discriminator_pretrain.txt")
-    reward_log = os.path.join(output_dir, "3_rewards_log.txt")
+    adversarial_log = os.path.join(TEXT_DIR, f"config_{config_id}_seed_{seed}_0_adversarial_training_log.txt")
+    gen_pretrain_log = os.path.join(TEXT_DIR, f"config_{config_id}_seed_{seed}_1_generator_pretrain.txt")
+    disc_pretrain_log = os.path.join(TEXT_DIR, f"config_{config_id}_seed_{seed}_2_discriminator_pretrain.txt")
+    reward_log = os.path.join(TEXT_DIR, f"config_{config_id}_seed_{seed}_3_rewards_log.txt")
     
     # Print training configuration
     print(f"Training generator with:")
@@ -281,7 +284,7 @@ def main():
             positive_samples=positive_samples,
             eval_freq=config['g_pre_eval_freq'],
             lr_patience=config['g_lr_patience'],
-            lr_decay=cocnfig['g_lr_decay'],
+            lr_decay=config['g_lr_decay'],
             log_path=gen_pretrain_log
         )
 
@@ -304,8 +307,8 @@ def main():
         )
 
         # Save pretrained models
-        gen_weights_path = os.path.join(output_dir, "generator_pretrained.pth")
-        disc_save_path = os.path.join(output_dir, "discriminator_pretrained.pth")
+        gen_weights_path = os.path.join(output_dir, f"{seed}_generator_pretrained.pth")
+        disc_save_path = os.path.join(output_dir, f"{seed}_discriminator_pretrained.pth")
         
         # Save generator
         th.save({

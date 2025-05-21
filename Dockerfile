@@ -46,7 +46,7 @@ RUN useradd -u 3754 -g 100 -m myuser && \
 USER myuser
 
 # Copy the PPO-SeqGAN files
-COPY --chown=myuser:users discriminator.py generator.py environment.py callback.py train.py train_parallel.py ${WORKING_DIR}/
+COPY --chown=myuser:users discriminator.py generator.py oracle.py rollout.py train.py train_parallel.py ${WORKING_DIR}/
 
 # Copy all saved model files
 COPY --chown=myuser:users saved_models/*.pth ${WORKING_DIR}/saved_models/

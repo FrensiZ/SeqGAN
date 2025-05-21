@@ -17,6 +17,7 @@ class Rollout:
             generator.hidden_dim,
             generator.sequence_length,
             generator.start_token,
+            generator.num_layers,
             device
         ).to(self.device)
         
@@ -41,7 +42,7 @@ class Rollout:
         
         # For the last token, use the discriminator directly
         with th.no_grad():
-            final_rewards = self.discriminator.get_reward(sequences)
+            final_rewards = self.discriminator.get_sequence_probability(sequences)
             rewards[:, -1] = final_rewards
         
         # For each position, perform rollout
@@ -55,7 +56,7 @@ class Rollout:
                 
                 # Get discriminator rewards for the completions
                 with th.no_grad():
-                    completion_rewards = self.discriminator.get_reward(completions)
+                    completion_rewards = self.discriminator.get_sequence_probability(completions)
                     position_rewards += completion_rewards
             
             # Average rewards across rollouts
