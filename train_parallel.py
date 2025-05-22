@@ -24,7 +24,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PARALLEL_CONFIG = {
     
-    'num_seeds':                    1,
+    'num_seeds':                    30,
     'param_grid': {
 
         'd_emb_dim':                [64],
@@ -36,35 +36,37 @@ PARALLEL_CONFIG = {
 
         ### PREATRINING
 
-        'pretrain_epochs':          [100],
+        'pretrain_epochs':          [150],
 
-        'd_outer_epochs':           [15],
-        'd_inner_epochs':           [3],
+        'd_outer_epochs':           [50],
+        'd_inner_epochs':           [1],
         'd_lr_patience':            [10],
         'd_lr_decay':               [0.5],
 
         'd_dropout':                [0.2],
         'd_batch_size':             [128],
-        'g_pre_eval_freq':          [5],
+        'g_pre_eval_freq':          [1],
         'g_pretrain_batch_size':    [128], 
         
-        'd_lr_pretrain':            [1e-3],
+        'd_lr_pretrain':            [5e-4],
         'd_lr_min':                 [1e-5],
+        
+        'g_lr_pretrain':            [3e-3],
         'g_lr_patience':            [5],
-        'g_lr_decay':               [0.5],
-        'g_lr_pretrain':            [5e-3],
+        'g_lr_decay':               [0.7],
         
         
         ### ADVERSARIAL TRAINING
         
         'do_pretrain':              [True],
 
-        'adv_epochs':               [50],
+        'adv_epochs':               [1],
+
         'g_adv_batch_size':         [64],
 
         'g_steps':                  [3],
-        'd_steps':                  [2],
-        'k_epochs':                 [3],
+        'd_steps':                  [1],
+        'k_epochs':                 [1],
 
         'd_learning_rate':          [1e-6],
         'g_learning_rate':          [8e-4],
@@ -80,7 +82,7 @@ def get_config_hash(config):
 
 def get_free_gpus():
     """Find all free GPUs to use from the allowed GPUs."""
-    allowed_gpus = [0]  # Only use these GPUs
+    allowed_gpus = [1,2,3,4,6,7]  # Only use these GPUs
     try:
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=memory.used,memory.free,utilization.gpu', '--format=csv,nounits,noheader'], 

@@ -151,7 +151,7 @@ def train_seqgan(generator, discriminator, rollout, target_lstm, g_optimizer, d_
             print(metrics_str)
             
             # Write to log file
-            log.write(f"{epoch}\t{nll:.6f}\t{avg_pg_loss:.6f}\t{avg_d_loss:.6f}\t{d_accuracy:.6f}\t{real_prob:.6f}\t{fake_prob:.6f}\t{avg_reward:.6f}\n")
+            log.write(f"{epoch}\t{nll:.4f}\t{avg_pg_loss:.4f}\t{avg_d_loss:.4f}\t{d_accuracy:.4f}\t{real_prob:.6f}\t{fake_prob:.4f}\t{avg_reward:.4f}\n")
             log.flush()
     
     log.close()
