@@ -1,0 +1,55 @@
+Discriminator pre-training...
+epoch:	1	loss:	0.4171	accuracy:	0.9570	real_prob	0.8094	fake_prob	0.0723
+epoch:	2	loss:	0.2478	accuracy:	0.9620	real_prob	0.8427	fake_prob	0.0647
+epoch:	3	loss:	0.2457	accuracy:	0.9620	real_prob	0.8093	fake_prob	0.0650
+epoch:	4	loss:	0.2291	accuracy:	0.9660	real_prob	0.8507	fake_prob	0.0579
+epoch:	5	loss:	0.2355	accuracy:	0.9607	real_prob	0.8252	fake_prob	0.0673
+epoch:	6	loss:	0.2462	accuracy:	0.9603	real_prob	0.8293	fake_prob	0.0660
+epoch:	7	loss:	0.2469	accuracy:	0.9555	real_prob	0.8385	fake_prob	0.0740
+epoch:	8	loss:	0.2500	accuracy:	0.9595	real_prob	0.8248	fake_prob	0.0649
+epoch:	9	loss:	0.2453	accuracy:	0.9595	real_prob	0.8443	fake_prob	0.0690
+epoch:	10	loss:	0.2434	accuracy:	0.9585	real_prob	0.8276	fake_prob	0.0710
+epoch:	11	loss:	0.2457	accuracy:	0.9517	real_prob	0.8330	fake_prob	0.0809
+epoch:	12	loss:	0.2436	accuracy:	0.9620	real_prob	0.8427	fake_prob	0.0637
+epoch:	13	loss:	0.2445	accuracy:	0.9640	real_prob	0.8325	fake_prob	0.0598
+epoch:	14	loss:	0.2442	accuracy:	0.9613	real_prob	0.8305	fake_prob	0.0643
+Learning rate reduced to 0.00025
+epoch:	15	loss:	0.2444	accuracy:	0.9635	real_prob	0.8382	fake_prob	0.0614
+epoch:	16	loss:	0.2475	accuracy:	0.9617	real_prob	0.8247	fake_prob	0.0615
+epoch:	17	loss:	0.2425	accuracy:	0.9625	real_prob	0.8257	fake_prob	0.0606
+epoch:	18	loss:	0.2396	accuracy:	0.9535	real_prob	0.8319	fake_prob	0.0759
+epoch:	19	loss:	0.2374	accuracy:	0.9625	real_prob	0.8430	fake_prob	0.0632
+epoch:	20	loss:	0.2411	accuracy:	0.9580	real_prob	0.8349	fake_prob	0.0684
+epoch:	21	loss:	0.2414	accuracy:	0.9615	real_prob	0.8257	fake_prob	0.0628
+epoch:	22	loss:	0.2425	accuracy:	0.9600	real_prob	0.8276	fake_prob	0.0652
+epoch:	23	loss:	0.2433	accuracy:	0.9603	real_prob	0.8359	fake_prob	0.0669
+epoch:	24	loss:	0.2464	accuracy:	0.9620	real_prob	0.8321	fake_prob	0.0623
+Learning rate reduced to 0.000125
+epoch:	25	loss:	0.2429	accuracy:	0.9617	real_prob	0.8306	fake_prob	0.0601
+epoch:	26	loss:	0.2411	accuracy:	0.9577	real_prob	0.8295	fake_prob	0.0689
+epoch:	27	loss:	0.2400	accuracy:	0.9620	real_prob	0.8344	fake_prob	0.0632
+epoch:	28	loss:	0.2398	accuracy:	0.9515	real_prob	0.8305	fake_prob	0.0789
+epoch:	29	loss:	0.2389	accuracy:	0.9587	real_prob	0.8361	fake_prob	0.0677
+epoch:	30	loss:	0.2434	accuracy:	0.9647	real_prob	0.8366	fake_prob	0.0587
+epoch:	31	loss:	0.2394	accuracy:	0.9627	real_prob	0.8349	fake_prob	0.0608
+epoch:	32	loss:	0.2390	accuracy:	0.9657	real_prob	0.8365	fake_prob	0.0567
+epoch:	33	loss:	0.2431	accuracy:	0.9633	real_prob	0.8334	fake_prob	0.0584
+epoch:	34	loss:	0.2397	accuracy:	0.9583	real_prob	0.8308	fake_prob	0.0667
+Learning rate reduced to 6.25e-05
+epoch:	35	loss:	0.2424	accuracy:	0.9655	real_prob	0.8355	fake_prob	0.0572
+epoch:	36	loss:	0.2404	accuracy:	0.9590	real_prob	0.8335	fake_prob	0.0658
+epoch:	37	loss:	0.2452	accuracy:	0.9627	real_prob	0.8251	fake_prob	0.0596
+epoch:	38	loss:	0.2414	accuracy:	0.9563	real_prob	0.8333	fake_prob	0.0717
+epoch:	39	loss:	0.2430	accuracy:	0.9640	real_prob	0.8287	fake_prob	0.0560
+epoch:	40	loss:	0.2387	accuracy:	0.9560	real_prob	0.8369	fake_prob	0.0714
+epoch:	41	loss:	0.2391	accuracy:	0.9640	real_prob	0.8365	fake_prob	0.0594
+epoch:	42	loss:	0.2358	accuracy:	0.9545	real_prob	0.8373	fake_prob	0.0728
+epoch:	43	loss:	0.2391	accuracy:	0.9593	real_prob	0.8361	fake_prob	0.0660
+epoch:	44	loss:	0.2399	accuracy:	0.9600	real_prob	0.8361	fake_prob	0.0651
+Learning rate reduced to 3.125e-05
+epoch:	45	loss:	0.2432	accuracy:	0.9625	real_prob	0.8317	fake_prob	0.0608
+epoch:	46	loss:	0.2408	accuracy:	0.9620	real_prob	0.8368	fake_prob	0.0621
+epoch:	47	loss:	0.2366	accuracy:	0.9583	real_prob	0.8362	fake_prob	0.0669
+epoch:	48	loss:	0.2412	accuracy:	0.9605	real_prob	0.8317	fake_prob	0.0629
+epoch:	49	loss:	0.2370	accuracy:	0.9620	real_prob	0.8368	fake_prob	0.0631
+epoch:	50	loss:	0.2411	accuracy:	0.9623	real_prob	0.8327	fake_prob	0.0603
