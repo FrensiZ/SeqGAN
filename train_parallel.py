@@ -58,18 +58,18 @@ PARALLEL_CONFIG = {
         
         ### ADVERSARIAL TRAINING
         
-        'do_pretrain':              [True],
+        'do_pretrain':              [False],
 
-        'adv_epochs':               [1],
+        'adv_epochs':               [50],
 
-        'g_adv_batch_size':         [64],
+        'g_adv_batch_size':         [128],
 
         'g_steps':                  [3],
         'd_steps':                  [1],
         'k_epochs':                 [1],
 
         'd_learning_rate':          [1e-6],
-        'g_learning_rate':          [8e-4],
+        'g_learning_rate':          [4e-4],
 
     },
     'output_dir': RESULTS_DIR,
